@@ -193,27 +193,27 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .btnrow{display:flex; gap:8px}
 .btnrow .btn{flex:1 1 0; min-width:0; padding-inline:.3em}
 
-/* ---------- battle ---------- */
-.status{height:4.3rem; display:flex; flex-direction:column; justify-content:center; gap:1px; overflow:hidden}
-.status h2{font-size:1.6rem; white-space:nowrap}
+/* ---------- battle: two sheets stacked, aiming on top, own fleet below ---------- */
+.status{height:3.1rem; display:flex; flex-direction:column; justify-content:center; gap:1px; overflow:hidden}
+.status h2{font-size:1.45rem; white-space:nowrap}
 .status h2 .hl{text-decoration:underline; text-decoration-color:var(--marker); text-decoration-thickness:.42em; text-underline-offset:-.16em; text-decoration-skip-ink:none}
 .status .warn{color:var(--red); font-weight:600}
-.status p{height:2.6em; overflow:hidden}
-.firebox{height:50px}
-.firebox .btn{width:100%; min-height:50px}
-.mini{display:flex; gap:12px; height:8.3rem; overflow:hidden}
-.mini .own{display:flex; flex-direction:column; gap:3px}
-.mini .sea{width:7.2rem; --lab:.75rem}
-.mini .sea .cols, .mini .sea .rows{font-size:.5rem}
-.mini .board{border-width:1.5px}
-.tally{display:flex; flex-direction:column; gap:8px; min-width:0; flex:1 1 0}
-.pips{display:flex; flex-wrap:wrap; gap:4px 7px; margin-top:3px}
+.status p{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.bhead{display:flex; align-items:center; justify-content:space-between; gap:10px; height:1rem; overflow:hidden}
+.firebox{height:46px}
+.firebox .btn{width:100%; min-height:46px}
+#view > .fit.own .sea{--lab:.85rem}
+#view > .fit.own .sea .cols, #view > .fit.own .sea .rows{font-size:.58rem}
+#view > .fit.own .board{border-width:1.5px}
+.pips{display:flex; flex-wrap:wrap; gap:4px 7px}
 .pip{display:inline-flex; gap:1px; position:relative}
 .pip i{width:7px; height:7px; background:var(--ink); display:block}
 .pip i:first-child{border-radius:4px 0 0 4px}
 .pip i:last-child{border-radius:0 4px 4px 0}
 .pip.dead i{background:var(--soft); opacity:.45}
 .pip.dead::after{content:""; position:absolute; left:-2px; right:-2px; top:50%; border-top:2px solid var(--red); transform:rotate(-8deg)}
+.bhead .pips{flex-wrap:nowrap; gap:5px}
+.bhead .pip i{width:5px}
 
 /* ---------- menu sheet ---------- */
 .sheet{position:fixed; inset:0; z-index:20; background:rgba(10,14,24,.55); display:flex; align-items:flex-end; justify-content:center}
@@ -702,7 +702,17 @@ function screenName(){
 }
 /* the board takes the largest square that fits the free space, so nothing ever has to scroll */
 function fitBoards(){
-  view.querySelectorAll('.fit').forEach(f => {
+  const fits = [...view.querySelectorAll('.fit')];
+  if (fits.length===2){
+    /* battle: both sheets share the free height, the one you aim at gets the larger share */
+    const kids = [...view.children], gap = parseFloat(getComputedStyle(view).rowGap) || 0;
+    const fixed = kids.filter(k=>!k.classList.contains('fit')).reduce((a,k)=>a + k.offsetHeight, 0);
+    const free = view.clientHeight - fixed - gap*(kids.length-1), w = Math.min(view.clientWidth, 448);
+    const top = Math.max(120, Math.floor(Math.min(w, free*0.58))), low = Math.max(90, Math.floor(Math.min(w, free - top)));
+    [[fits[0], top], [fits[1], low]].forEach(([f, side]) => { f.style.flex = '0 0 ' + side + 'px'; f.firstElementChild.style.width = side + 'px'; });
+    return;
+  }
+  fits.forEach(f => {
     const sea = f.firstElementChild; if (!sea) return;
     const side = Math.floor(Math.min(f.clientWidth, f.clientHeight, 448));
     if (side > 0) sea.style.width = Math.max(side, 150) + 'px';
@@ -764,13 +774,11 @@ function build(name){
   else if (name==='battle'){
     view.innerHTML = `
       <section class="status"><h2 id="stTitle"></h2><p class="small" id="stSub"></p></section>
-      <div class="label">Gegnerisches Gewässer</div>
+      <div class="bhead"><span class="label">Gegner</span><span id="tallyT"></span></div>
       <section class="fit">${seaHTML('seaTarget', true)}</section>
       <section class="firebox" id="fireBox"></section>
-      <section class="mini">
-        <div class="own"><div class="label">Deine Flotte</div>${seaHTML('seaOwn', false)}</div>
-        <div class="tally" id="tally"></div>
-      </section>`;
+      <div class="bhead"><span class="label">Deine Flotte</span><span id="tallyO"></span></div>
+      <section class="fit own">${seaHTML('seaOwn', false)}</section>`;
   }
   fitBoards();
 }
@@ -885,17 +893,17 @@ function paint(){
       const nm = cellName(l.c), len = l.sunk ? l.sunk.length : 0;
       if (l.mine) sub = l.r==null ? `Dein Schuss auf ${nm}…`
         : l.r==='m' ? `${nm}: Wasser.`
-        : len ? `${nm}: Treffer, ${NAMES[len]||'Schiff'} versenkt!` + (out?'':' Du darfst nochmal.')
+        : len ? `${nm}: Treffer, ${NAMES[len]||'Schiff'} versenkt!`
         : `${nm}: Treffer!` + (out?'':' Du darfst nochmal.');
       else sub = l.r==='m' ? `Gegner schießt auf ${nm}: Wasser.`
         : len ? `Gegner versenkt ${YOURS[len]||'dein Schiff'} (${nm}).`
         : `Gegner trifft auf ${nm}.`;
-    } else sub = t==='me' ? 'Du eröffnest das Spiel. Tippe ein Feld an.' : 'Dein Gegner eröffnet das Spiel.';
-    if (out==='won') sub = 'Du hast die ganze gegnerische Flotte versenkt.';
-    if (out==='lost') sub = 'Deine Flotte ist versenkt. Gestrichelt siehst du, was übrig war.';
+    } else sub = t==='me' ? 'Du eröffnest. Tippe oben ein Feld an.' : 'Dein Gegner eröffnet das Spiel.';
+    if (out==='won') sub = 'Alle gegnerischen Schiffe sind versenkt.';
+    if (out==='lost') sub = 'Gestrichelt siehst du, was übrig war.';
     setHTML('stTitle', title);
     const el = $('stSub');
-    if (!online() && !out){ el.className='small warn'; setText('stSub', R.peerLeft ? 'Dein Gegner hat das Spiel verlassen.' : 'Verbindung unterbrochen. Es wird neu verbunden…'); }
+    if (!online() && !out){ el.className='small warn'; setText('stSub', R.peerLeft ? 'Dein Gegner hat das Spiel verlassen.' : 'Verbindung unterbrochen, verbinde neu…'); }
     else { el.className='small soft'; setText('stSub', sub); }
 
     /* target board */
@@ -924,7 +932,7 @@ function paint(){
       : `<button type="button" class="btn fire" id="btnFire" ${R.sel!=null && canAim && online() ? '' : 'disabled'}>${
           !canAim ? (t==='wait' ? 'Warte auf Antwort…' : 'Gegner zielt…')
           : !online() ? 'Keine Verbindung'
-          : R.sel!=null ? `Feuer auf ${cellName(R.sel)}` : 'Feld antippen zum Zielen'}</button>`);
+          : R.sel!=null ? `Feuer auf ${cellName(R.sel)}` : 'Oben ein Feld antippen'}</button>`);
 
     /* own board */
     const o = {}, lost = [];
@@ -935,9 +943,8 @@ function paint(){
     paintBoard('seaOwn', o);
 
     const f = fleet();
-    setHTML('tally', `
-      <div><div class="label">Gegner</div><div class="small">${sunkLens.length} von ${f.length} versenkt</div>${pipsHTML(f, sunkLens)}</div>
-      <div><div class="label">Du</div><div class="small">${lost.length} von ${f.length} verloren</div>${pipsHTML(f, lost)}</div>`);
+    setHTML('tallyT', pipsHTML(f, sunkLens));
+    setHTML('tallyO', pipsHTML(f, lost));
   }
 }
 
