@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Schiffe versenken</title>
 <meta name="description" content="Schiffe versenken für zwei Smartphones. Link teilen und losspielen.">
 <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)">
@@ -14,8 +14,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&family=Kalam:wght@400;700&display=swap">
 <style>
-/* Layout: one phone-width column. The boards are sheets of squared paper (Karopapier);
-   everything around them is pencil notes, ballpoint ink and one stroke of highlighter. */
+/* Layout: one fixed phone screen, nothing scrolls during a game. The boards are sheets of squared
+   paper (Karopapier) that take whatever room is left; around them pencil notes, ballpoint ink and
+   one stroke of highlighter. */
 :root{
   --paper:#f6f8fa;      /* desk / page */
   --sheet:#ffffff;      /* the squared paper itself */
@@ -40,78 +41,76 @@
   }
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%; height:100%; overflow:hidden; overscroll-behavior:none}
 body{
-  margin:0; background:var(--paper); color:var(--pencil);
-  font:400 16px/1.45 var(--body);
-  padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);
-  -webkit-tap-highlight-color:transparent;
+  margin:0; position:fixed; inset:0; overflow:hidden; overscroll-behavior:none;
+  background:var(--paper); color:var(--pencil);
+  font:400 16px/1.4 var(--body);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
 }
+input{user-select:text; -webkit-user-select:text}
 [hidden]{display:none!important}
-.app{max-width:30rem; margin:0 auto; padding-inline:16px; padding-block:10px 28px; display:flex; flex-direction:column; gap:14px}
+.app{
+  height:100%; max-width:30rem; margin:0 auto; display:flex; flex-direction:column; gap:8px;
+  padding:calc(8px + env(safe-area-inset-top,0px)) 16px calc(10px + env(safe-area-inset-bottom,0px));
+}
+#view{flex:1 1 0; min-height:0; display:flex; flex-direction:column; gap:8px; overflow:hidden}
+#view.scroll{overflow-y:auto; overscroll-behavior:contain; gap:14px; padding-bottom:12px}
+#view:not(.scroll){touch-action:none}   /* game screens: taps only, the page can neither pan nor zoom */
+#view > *{flex:none}
+#view > .fit{flex:1 1 0; min-height:0; min-width:0; display:flex; align-items:center; justify-content:center}
 
 /* ---------- header ---------- */
-.top{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 10px; min-height:36px}
-.top h1{font:700 1.45rem/1 var(--display); margin:0; letter-spacing:.01em; padding-top:.2em; white-space:nowrap}
-.conn{display:flex; align-items:center; gap:7px; font-size:.8rem; color:var(--soft); white-space:nowrap}
-.conn b{font-weight:700; color:var(--pencil); letter-spacing:.08em; font-variant-numeric:tabular-nums}
+.top{display:flex; align-items:center; gap:10px; height:40px; flex:none}
+.top h1{font:700 1.3rem/1 var(--display); margin:0; padding-top:.2em; white-space:nowrap; flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis}
+.conn{display:flex; align-items:center; gap:6px; font-size:.8rem; color:var(--soft); white-space:nowrap}
 .dot{width:9px; height:9px; border-radius:50%; background:var(--soft); flex:none}
 .dot.on{background:var(--ok)}
 .dot.wait{background:var(--marker); box-shadow:0 0 0 1px var(--soft) inset}
 .dot.off{background:var(--red)}
 
 /* ---------- type ---------- */
-h2{font:700 1.5rem/1.15 var(--display); margin:0; text-wrap:balance}
+h2{font:700 1.5rem/1.15 var(--display); margin:0}
 p{margin:0}
 .soft{color:var(--soft)}
-.small{font-size:.875rem}
-.label{font-size:.72rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--soft)}
+.small{font-size:.84rem; line-height:1.3}
+.label{font-size:.7rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--soft); line-height:1.2}
 .stack{display:flex; flex-direction:column; gap:12px}
-.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-.row > .grow{flex:1 1 0; min-width:0}
+.row{display:flex; gap:8px; align-items:center}
+.grow{flex:1 1 0; min-width:0}
 
 /* ---------- controls ---------- */
 button, input{font:inherit; color:inherit}
 .btn{
   appearance:none; border:2px solid var(--ink); background:transparent; color:var(--ink);
-  font-weight:700; padding:.72em 1.1em; border-radius:10px; cursor:pointer; min-height:48px;
+  font-weight:700; padding:.5em .9em; border-radius:10px; cursor:pointer; min-height:48px; line-height:1.15;
   touch-action:manipulation;
 }
 .btn.primary{background:var(--ink); color:var(--on-ink)}
-.btn.fire{background:var(--marker); color:var(--on-marker); border-color:var(--pencil); font-size:1.1rem; width:100%}
+.btn.fire{background:var(--marker); color:var(--on-marker); border-color:var(--pencil); font-size:1.08rem; width:100%}
 .btn:disabled{opacity:.45; cursor:default}
 .btn.fire:disabled{background:transparent; color:var(--soft); border-color:var(--rule); opacity:1}
-.btn.quiet{border-color:transparent; color:var(--soft); font-weight:600; min-height:40px; padding:.4em .6em; text-decoration:underline; text-underline-offset:3px}
+.btn.sm{min-height:40px; padding:.3em .8em; font-size:.9rem}
+.btn.sq{width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; flex:none; font-size:1.3rem}
 .btn.danger{border-color:var(--red); color:var(--red)}
 :focus-visible{outline:3px solid var(--marker); outline-offset:2px}
-.seg{display:grid; grid-template-columns:1fr 1fr; border:2px solid var(--ink); border-radius:10px; overflow:hidden}
-.seg button{appearance:none; border:0; background:transparent; color:var(--ink); padding:.6em .5em; font-weight:600; cursor:pointer; min-height:48px; line-height:1.2}
-.seg button small{display:block; font-weight:400; font-size:.78rem; opacity:.85}
-.seg button[aria-pressed="true"]{background:var(--ink); color:var(--on-ink)}
 .code-in{
   width:100%; min-width:0; border:2px solid var(--rule); background:var(--sheet); border-radius:10px;
-  padding:.6em .7em; min-height:48px; font-weight:700; letter-spacing:.3em; text-transform:uppercase; text-align:center;
+  padding:.6em .7em; min-height:48px; font-size:16px; font-weight:700; letter-spacing:.3em; text-transform:uppercase; text-align:center;
 }
 .code-in::placeholder{letter-spacing:.05em; font-weight:400; text-transform:none; color:var(--soft)}
-.link-in{width:100%; border:1px dashed var(--rule); background:transparent; border-radius:8px; padding:.5em .6em; font-size:.8rem; color:var(--soft)}
+.link-in{width:100%; border:1px dashed var(--rule); background:transparent; border-radius:8px; padding:.5em .6em; font-size:16px; color:var(--soft)}
 hr{border:0; border-top:1px dashed var(--rule); margin:2px 0; width:100%}
-details{font-size:.9rem; color:var(--soft)}
-details summary{cursor:pointer; font-weight:600; color:var(--pencil); padding:.3em 0}
-details ul{margin:.3em 0 0; padding-left:1.2em; display:flex; flex-direction:column; gap:.3em}
-
-/* ---------- invite note ---------- */
-.note{background:var(--sheet); border:1.5px solid var(--rule); border-radius:4px 14px 6px 12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px}
-.note .code{font:700 2.1rem/1 var(--display); letter-spacing:.14em; padding-top:.15em}
+.code{font:700 1.5rem/1 var(--display); letter-spacing:.12em; padding-top:.2em}
 
 /* ---------- boards ---------- */
 .sea{
-  --lab:1.25rem;
+  --lab:1.15rem;
   display:grid; grid-template-columns:var(--lab) minmax(0,1fr); grid-template-rows:var(--lab) auto;
-  width:100%; margin-inline:auto; user-select:none; -webkit-user-select:none;
+  width:100%; flex:none;
 }
-.sea.big{max-width:min(100%, 27rem)}
-#seaTarget{max-width:min(100%, max(15rem, calc(100dvh - 19rem)), 27rem)}  /* keep the fire button on screen */
-.sea .cols, .sea .rows{display:grid; font:700 .85rem/1 var(--display); color:var(--ink); text-align:center; align-items:center}
+.sea .cols, .sea .rows{display:grid; font:700 .8rem/1 var(--display); color:var(--ink); text-align:center; align-items:center}
 .sea .cols{grid-column:2; grid-template-columns:repeat(10,1fr)}
 .sea .rows{grid-column:1; grid-row:2; grid-template-rows:repeat(10,1fr); font-variant-numeric:tabular-nums}
 .board{
@@ -130,6 +129,8 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .cell.sh.s1::before{right:10%; border-radius:0 99px 99px 0}
 .cell.sv.s0::before{top:10%; border-radius:99px 99px 0 0}
 .cell.sv.s1::before{bottom:10%; border-radius:0 0 99px 99px}
+.cell.sh.s0.s1::before{border-radius:99px}
+.cell.sv.s0.s1::before{border-radius:99px}
 .cell.dead::before{opacity:.35}
 .cell.sunk::before{background:var(--red); opacity:.28}
 .cell.ghost::before{background:transparent; border:2px dashed var(--ink); opacity:.8}
@@ -139,7 +140,7 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .cell.ghost.sv::before{border-top-width:0; border-bottom-width:0}
 .cell.ghost.sv.s0::before{border-top-width:2px}
 .cell.ghost.sv.s1::before{border-bottom-width:2px}
-.cell.lift::before{opacity:.7; box-shadow:0 0 0 2px var(--marker)}
+.cell.lift::before{background:var(--ok); opacity:.85}
 .cell.bad::before{background:var(--red)}
 
 /* marks */
@@ -156,8 +157,7 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .cell.sel::after{inset:18%; border:2px solid var(--on-marker); border-radius:50%; z-index:2}
 .cell.last{box-shadow:0 0 0 2px var(--marker) inset; z-index:3}
 .board.locked .cell{cursor:default}
-.board.drag{touch-action:none}
-.board.drag .cell.ship{cursor:grab}
+.board.drag, .board.drag .cell{touch-action:none}
 .board.shake{animation:shake .3s}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
@@ -166,32 +166,69 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .cell.pend.last::after{animation:spin 2.4s linear infinite}
 @media (prefers-reduced-motion: reduce){ .cell::after, .board{animation:none!important} }
 
+/* ---------- lobby ---------- */
+.hero{display:flex; flex-direction:column; align-items:center; gap:6px}
+.hero .sea{width:13rem; --lab:.95rem}
+.hero .sea .cols, .hero .sea .rows{font-size:.65rem}
+.hero .cap{text-align:center}
+.stepper{display:flex; align-items:center; gap:12px; border:2px solid var(--rule); border-radius:12px; padding:8px 10px; background:var(--sheet)}
+.stepper .mid{flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center}
+.stepper .num{font:700 1.5rem/1 var(--display); padding-top:.15em}
+
+/* ---------- setup ---------- */
+.slot{height:3rem; display:flex; align-items:center; gap:10px}
+.hintrow{height:2.9rem; display:flex; align-items:center; gap:10px}
+.ori{display:inline-flex; gap:1px}
+.ori i{width:7px; height:9px; background:currentColor; display:block}
+.ori.v{flex-direction:column}
+.ori.v i{width:9px; height:7px}
+.tray{display:flex; flex-wrap:wrap; gap:6px 8px; align-content:flex-start; align-items:center; height:4.5rem; overflow:hidden}
+.tship{appearance:none; border:0; background:transparent; padding:8px 3px; display:inline-flex; gap:1px; border-radius:7px; touch-action:none; cursor:grab}
+.tship i{width:13px; height:15px; background:var(--ink); display:block}
+.tship i:first-child{border-radius:7px 0 0 7px}
+.tship i:last-child{border-radius:0 7px 7px 0}
+.tship.used i{background:transparent; box-shadow:0 0 0 1.5px var(--rule) inset}
+.tship.picked{background:var(--marker)}
+.tship.picked i{background:var(--on-marker)}
+.btnrow{display:flex; gap:8px}
+.btnrow .btn{flex:1 1 0; min-width:0; padding-inline:.3em}
+
 /* ---------- battle ---------- */
-.status{display:flex; flex-direction:column; gap:2px; min-height:4.2rem}
-.status h2{font-size:1.8rem}
+.status{height:4.3rem; display:flex; flex-direction:column; justify-content:center; gap:1px; overflow:hidden}
+.status h2{font-size:1.6rem; white-space:nowrap}
 .status h2 .hl{text-decoration:underline; text-decoration-color:var(--marker); text-decoration-thickness:.42em; text-underline-offset:-.16em; text-decoration-skip-ink:none}
 .status .warn{color:var(--red); font-weight:600}
-.mini{display:grid; grid-template-columns:minmax(0,11fr) minmax(0,9fr); gap:14px; align-items:start}
-.mini .sea{--lab:.9rem}
-.mini .sea .cols, .mini .sea .rows{font-size:.6rem}
-.tally{display:flex; flex-direction:column; gap:10px; min-width:0}
-.pips{display:flex; flex-wrap:wrap; gap:5px 8px; margin-top:4px}
+.status p{height:2.6em; overflow:hidden}
+.firebox{height:50px}
+.firebox .btn{width:100%; min-height:50px}
+.mini{display:flex; gap:12px; height:8.3rem; overflow:hidden}
+.mini .own{display:flex; flex-direction:column; gap:3px}
+.mini .sea{width:7.2rem; --lab:.75rem}
+.mini .sea .cols, .mini .sea .rows{font-size:.5rem}
+.mini .board{border-width:1.5px}
+.tally{display:flex; flex-direction:column; gap:8px; min-width:0; flex:1 1 0}
+.pips{display:flex; flex-wrap:wrap; gap:4px 7px; margin-top:3px}
 .pip{display:inline-flex; gap:1px; position:relative}
-.pip i{width:8px; height:8px; background:var(--ink); display:block}
+.pip i{width:7px; height:7px; background:var(--ink); display:block}
 .pip i:first-child{border-radius:4px 0 0 4px}
 .pip i:last-child{border-radius:0 4px 4px 0}
 .pip.dead i{background:var(--soft); opacity:.45}
 .pip.dead::after{content:""; position:absolute; left:-2px; right:-2px; top:50%; border-top:2px solid var(--red); transform:rotate(-8deg)}
-.hero{display:grid; grid-template-columns:minmax(0,1fr); gap:6px}
-.hero .sea{max-width:15rem; --lab:1rem}
-.hero .sea .cols, .hero .sea .rows{font-size:.7rem}
-.hero .cap{text-align:center}
+
+/* ---------- menu sheet ---------- */
+.sheet{position:fixed; inset:0; z-index:20; background:rgba(10,14,24,.55); display:flex; align-items:flex-end; justify-content:center}
+.sheet .panel{
+  width:100%; max-width:30rem; max-height:88%; overflow-y:auto; overscroll-behavior:contain;
+  background:var(--paper); border-radius:16px 16px 0 0; border-top:2px solid var(--ink);
+  padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; gap:14px;
+}
+.sheet ul{margin:0; padding-left:1.2em; display:flex; flex-direction:column; gap:.35em; font-size:.9rem; color:var(--soft)}
 
 /* ---------- toast ---------- */
 #toast{
-  position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,20px);
-  background:var(--pencil); color:var(--paper); padding:.6em 1em; border-radius:99px; font-weight:600; font-size:.9rem;
-  opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; max-width:calc(100% - 32px); text-align:center; z-index:10;
+  position:fixed; left:50%; top:calc(52px + env(safe-area-inset-top,0px)); transform:translate(-50%,-12px);
+  background:var(--pencil); color:var(--paper); padding:.55em 1em; border-radius:99px; font-weight:600; font-size:.88rem;
+  opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; width:max-content; max-width:calc(100% - 32px); text-align:center; z-index:30;
 }
 #toast.show{opacity:1; transform:translate(-50%,0)}
 </style>
@@ -200,10 +237,12 @@ button.cell{cursor:pointer; touch-action:manipulation}
 <div class="app">
   <header class="top">
     <h1>Schiffe versenken</h1>
-    <div class="conn" id="conn" hidden><span class="dot" id="connDot"></span><span id="connText"></span><b id="connCode"></b></div>
+    <div class="conn" id="conn" hidden><span class="dot" id="connDot"></span><span id="connText"></span></div>
+    <button type="button" class="btn sm" id="btnMenu">Menü</button>
   </header>
-  <main id="view" class="stack"></main>
+  <main id="view"></main>
 </div>
+<div class="sheet" id="sheet" hidden><div class="panel" id="panel"></div></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -211,12 +250,14 @@ button.cell{cursor:pointer; touch-action:manipulation}
 'use strict';
 
 /* ================= constants ================= */
-const FLEETS = { klassisch:[5,4,4,3,3,3,2,2,2,2], kurz:[5,4,3,3,2] };
+const FLEETS = { 1:[3], 2:[4,3], 3:[4,3,2], 4:[5,4,3,2], 5:[5,4,3,3,2], 6:[5,4,3,3,2,2],
+                 7:[5,4,4,3,3,2,2], 8:[5,4,4,3,3,3,2,2], 9:[5,4,4,3,3,3,2,2,2], 10:[5,4,4,3,3,3,2,2,2,2] };
 const NAMES  = {5:'Schlachtschiff', 4:'Kreuzer', 3:'Zerstörer', 2:'U-Boot'};
 const YOURS  = {5:'dein Schlachtschiff', 4:'deinen Kreuzer', 3:'deinen Zerstörer', 2:'dein U-Boot'};
 const LETTERS = 'ABCDEFGHIJ';
-const KEY = 'schiffe-versenken-v1';
-const PEER_PREFIX = 'schiffe-versenken-v1-';
+const KEY = 'schiffe-versenken-v2';
+const PREF = 'schiffe-versenken-anzahl';
+const PEER_PREFIX = 'schiffe-versenken-v2-';
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const PEER_LIB = [
   'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
@@ -227,10 +268,12 @@ const $ = id => document.getElementById(id);
 const view = $('view');
 const cellName = c => LETTERS[c % 10] + (Math.floor(c / 10) + 1);
 const isCell = c => Number.isInteger(c) && c >= 0 && c < 100;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const fleet = () => FLEETS[S.fleet] || FLEETS[5];
 
 /* ================= state ================= */
 function blank(){
-  return { code:null, role:null, token:null, guest:null, fleet:'klassisch', met:false, g:0,
+  return { code:null, role:null, token:null, guest:null, fleet:5, met:false, g:0,
            ships:[], ready:false, peerReady:false, fired:[], recv:[], reveal:null };
 }
 function load(){
@@ -241,47 +284,47 @@ function load(){
   return null;
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function loadPref(){ try{ const n = parseInt(localStorage.getItem(PREF), 10); if (FLEETS[n]) return n; }catch(e){} return 5; }
 
 let S = load() || blank();
 /* runtime only */
-const R = { screen:null, status:'idle', peer:null, conn:null, lastSeen:0, probe:0, backoff:0, restartTimer:null, dialTimer:null,
-            hostOffline:false, peerLeft:false, full:false, sel:null, drag:null, confirmLeave:false, pickFleet:'klassisch', showLink:false };
+const R = { screen:null, status:'idle', peer:null, conn:null, pending:null, lastSeen:0, probe:0, backoff:0, restartTimer:null, dialTimer:null,
+            hostOffline:false, peerLeft:false, full:false, sel:null, drag:null, tapGuard:null, pick:null, orient:true,
+            menu:false, confirmLeave:false, pickFleet:loadPref(), showLink:false };
 
 /* ================= fleet geometry ================= */
-function cellsOf(s){ const a=[]; for(let i=0;i<s.len;i++) a.push(s.h ? s.y*10+s.x+i : (s.y+i)*10+s.x); return a; }
+function cellsOf(s){ const a=[]; if (!s.on) return a; for(let i=0;i<s.len;i++) a.push(s.h ? s.y*10+s.x+i : (s.y+i)*10+s.x); return a; }
 function inBounds(s){ return s.x>=0 && s.y>=0 && (s.h ? s.x+s.len<=10 && s.y<10 : s.y+s.len<=10 && s.x<10); }
 function touches(a, b){
   for (const p of cellsOf(a)) for (const q of cellsOf(b))
     if (Math.abs(p%10 - q%10) <= 1 && Math.abs(Math.floor(p/10) - Math.floor(q/10)) <= 1) return true;
   return false;
 }
+/* cand is treated as placed; ships that are still in the harbour are ignored */
 function fits(ships, i, cand){
   if (!inBounds(cand)) return false;
-  for (let j=0;j<ships.length;j++) if (j!==i && touches(cand, ships[j])) return false;
+  for (let j=0;j<ships.length;j++) if (j!==i && ships[j].on && touches(cand, ships[j])) return false;
   return true;
 }
-function randomLayout(fleet){
+function blankShips(f){ return f.map(len => ({len, h:true, x:0, y:0, on:false})); }
+function randomLayout(f){
   for (let attempt=0; attempt<500; attempt++){
     const ships=[]; let ok=true;
-    for (const len of fleet){
+    for (const len of f){
       let placed=false;
       for (let t=0;t<300 && !placed;t++){
         const h = Math.random()<.5;
-        const cand = {len, h, x:Math.floor(Math.random()*(h?11-len:10)), y:Math.floor(Math.random()*(h?10:11-len))};
+        const cand = {len, h, x:Math.floor(Math.random()*(h?11-len:10)), y:Math.floor(Math.random()*(h?10:11-len)), on:true};
         if (fits(ships, -1, cand)){ ships.push(cand); placed=true; }
       }
       if(!placed){ ok=false; break; }
     }
     if (ok) return ships;
   }
-  return [];
+  return blankShips(f);
 }
-function validLayout(ships, fleet){
-  if (!Array.isArray(ships) || ships.length!==fleet.length) return false;
-  const a = ships.map(s=>s.len).sort().join(), b = fleet.slice().sort().join();
-  if (a!==b) return false;
-  return ships.every((s,i)=> fits(ships, i, s));
-}
+function sameFleet(ships, f){ return Array.isArray(ships) && ships.length===f.length && ships.every((s,i)=> s && s.len===f[i]); }
+function validLayout(ships, f){ return sameFleet(ships, f) && ships.every((s,i)=> s.on && fits(ships, i, s)); }
 function around(cells){
   const out = new Set();
   for (const c of cells){
@@ -296,7 +339,7 @@ function around(cells){
 }
 
 /* ================= game rules ================= */
-const total = () => FLEETS[S.fleet].reduce((a,b)=>a+b,0);
+const total = () => fleet().reduce((a,b)=>a+b,0);
 const started = () => S.fired.length + S.recv.length > 0;
 function iStart(){ return (S.role==='host') === (S.g % 2 === 0); }
 function lastShot(){
@@ -318,8 +361,8 @@ function turn(){
   return (l.mine === (l.r==='h')) ? 'me' : 'them';
 }
 function resetGame(g){
-  S.g = g; S.ships = randomLayout(FLEETS[S.fleet]); S.ready=false; S.peerReady=false;
-  S.fired=[]; S.recv=[]; S.reveal=null; R.sel=null;
+  S.g = g; S.ships = blankShips(fleet()); S.ready=false; S.peerReady=false;
+  S.fired=[]; S.recv=[]; S.reveal=null; R.sel=null; R.pick=null;
 }
 
 /* ================= incoming / outgoing shots ================= */
@@ -327,7 +370,7 @@ function acceptShot(n, c, force){
   if (!isCell(c)) return;
   let e = S.recv.find(x=>x.c===c);
   if (!e){
-    if (!validLayout(S.ships, FLEETS[S.fleet])) return;
+    if (!validLayout(S.ships, fleet())) return;
     if (!force && (outcome() || turn()!=='them')) return;
     S.ready = true; S.peerReady = true;
     const ship = S.ships.find(s=>cellsOf(s).includes(c));
@@ -389,7 +432,7 @@ function stopLink(){
   gen++;
   clearTimeout(R.restartTimer); R.restartTimer=null;
   clearTimeout(R.dialTimer); R.dialTimer=null;
-  const p = R.peer; R.peer=null; R.conn=null;
+  const p = R.peer; R.peer=null; R.conn=null; R.pending=null;
   if (p) try{ p.destroy(); }catch(e){}
 }
 function scheduleRestart(){
@@ -480,6 +523,7 @@ function sendHello(){
   send({t:'hello', fleet:S.fleet, ready:!!S.ready, recv:S.recv, fired:S.fired.map(f=>({n:f.n, c:f.c}))});
   if (outcome()) send({t:'reveal', ships:S.ships});
 }
+const digest = () => [S.ready?1:0, S.fired.length, S.recv.length];
 function onMsg(m){
   if (!m || typeof m!=='object') return;
   if (m.t==='ping'){
@@ -503,9 +547,8 @@ function onMsg(m){
     else if (m.g < S.g){ sendHello(); return; }
     if (m.t==='again') return;
     if (S.role==='guest' && FLEETS[m.fleet]){
-      if (m.fleet!==S.fleet || !validLayout(S.ships, FLEETS[m.fleet])){
-        S.fleet = m.fleet; S.ships = randomLayout(FLEETS[S.fleet]);
-        if (S.ready){ S.ready = false; }
+      if (m.fleet!==S.fleet || !sameFleet(S.ships, FLEETS[m.fleet])){
+        S.fleet = m.fleet; S.ships = blankShips(fleet()); S.ready = false; R.pick = null;
         reply = true;
       }
       S.met = true;
@@ -521,7 +564,7 @@ function onMsg(m){
     else if (m.t==='res') applyResult(m);
     else if (m.t==='reveal'){
       if (Array.isArray(m.ships)) S.reveal = m.ships.slice(0,10)
-        .map(s=>({len:s.len|0, x:s.x|0, y:s.y|0, h:!!s.h})).filter(s=>s.len>=2 && s.len<=5 && inBounds(s));
+        .map(s=>({len:s.len|0, x:s.x|0, y:s.y|0, h:!!s.h, on:true})).filter(s=>s.len>=2 && s.len<=5 && inBounds(s));
     }
   }
   if (!before && outcome()) send({t:'reveal', ships:S.ships});
@@ -535,12 +578,12 @@ setInterval(() => {
   if (stale){
     const c = R.conn; R.conn = null; try{ c.close(); }catch(e){}
     R.backoff = 0; setStatus('reconnecting'); startLink();
-  } else send({t:'ping', d:[S.ready?1:0, S.fired.length, S.recv.length]});
+  } else send({t:'ping', d:digest()});
 }, 4000);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState!=='visible' || !S.code) return;
   wake();
-  if (online()){ R.lastSeen = Math.max(R.lastSeen, Date.now()-8000); R.probe = Date.now(); send({t:'ping', d:[S.ready?1:0, S.fired.length, S.recv.length]}); }
+  if (online()){ R.lastSeen = Math.max(R.lastSeen, Date.now()-8000); R.probe = Date.now(); send({t:'ping', d:digest()}); }
   else { R.backoff = 0; startLink(); }
 });
 window.addEventListener('online', () => { if (S.code && !online()){ R.backoff = 0; startLink(); } });
@@ -564,38 +607,30 @@ function shareUrl(){ return location.origin + location.pathname + '#' + S.code; 
 function createGame(){
   S = blank();
   S.code = rand(5, ALPHABET); S.role='host'; S.token = rand(16, 'abcdefghijklmnopqrstuvwxyz0123456789');
-  S.fleet = R.pickFleet; S.met = true; S.ships = randomLayout(FLEETS[S.fleet]);
-  R.full=false; R.backoff=0; save(); setHash(S.code); startLink(); wake(); paint();
+  S.fleet = R.pickFleet; S.met = true; S.ships = blankShips(fleet());
+  R.full=false; R.backoff=0; R.pick=null; R.orient=true; save(); setHash(S.code); startLink(); wake(); paint();
 }
 function joinGame(code){
   code = cleanCode(code);
   if (code.length!==5){ toast('Der Code hat 5 Zeichen.'); return; }
   S = blank();
   S.code = code; S.role='guest'; S.token = rand(16, 'abcdefghijklmnopqrstuvwxyz0123456789');
-  R.full=false; R.hostOffline=false; R.backoff=0; save(); setHash(code); startLink(); wake(); paint();
+  R.full=false; R.hostOffline=false; R.backoff=0; R.pick=null; R.orient=true; save(); setHash(code); startLink(); wake(); paint();
 }
-function leaveGame(){
-  send({t:'bye'});
-  setTimeout(() => { stopLink(); S = blank(); save(); setHash(''); R.confirmLeave=false; R.status='idle'; R.sel=null; paint(); }, 60);
-}
+function toLobby(){ R.full=false; stopLink(); S = blank(); save(); setHash(''); R.status='idle'; R.sel=null; R.menu=false; R.confirmLeave=false; paint(); }
+function leaveGame(){ send({t:'bye'}); setTimeout(toLobby, 60); }
 function setReady(v){
-  if (v && !validLayout(S.ships, FLEETS[S.fleet])) return;
+  if (v && !validLayout(S.ships, fleet())) return;
   S.ready = v; save(); send({t:'ready', ready:v}); paint();
 }
-function rematch(){
-  resetGame(S.g + 1); save(); send({t:'again'}); sendHello(); paint();
-}
+function rematch(){ resetGame(S.g + 1); save(); send({t:'again'}); sendHello(); paint(); }
 async function share(){
   const url = shareUrl();
   if (navigator.share){
     try{ await navigator.share({title:'Schiffe versenken', text:'Komm in mein Spiel!', url}); return; }
     catch(e){ if (e && e.name==='AbortError') return; }
   }
-  copyLink();
-}
-function copyLink(){
-  const url = shareUrl();
-  const fallback = () => { R.showLink = true; paint(); const i=$('linkIn'); if(i){ i.focus(); i.select(); } toast('Link markiert. Jetzt kopieren.'); };
+  const fallback = () => { R.showLink = true; R.menu = true; paint(); const i=$('linkIn'); if(i){ i.focus(); i.select(); } toast('Link markiert. Jetzt kopieren.'); };
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(()=>toast('Link kopiert'), fallback);
   else fallback();
 }
@@ -605,9 +640,34 @@ function toast(msg){
   clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
+/* ---- placing ships by hand ---- */
+function pickNext(){ const i = S.ships.findIndex(s=>!s.on); R.pick = i<0 ? null : i; }
+function placeAt(c){
+  if (R.pick==null || !S.ships[R.pick] || S.ships[R.pick].on) pickNext();
+  const i = R.pick; if (i==null){ toast('Alle Schiffe sind gesetzt. Ziehen verschiebt, Antippen dreht.'); return; }
+  const s = S.ships[i], h = R.orient;
+  const cand = {len:s.len, h, on:true, x: h ? Math.min(c%10, 10-s.len) : c%10, y: h ? Math.floor(c/10) : Math.min(Math.floor(c/10), 10-s.len)};
+  if (!fits(S.ships, i, cand)){ toast('Hier passt es nicht. Schiffe dürfen sich nicht berühren.'); shake(); return; }
+  S.ships[i] = cand; pickNext(); save(); paint();
+}
+function rotate(i, pivot){
+  const s = S.ships[i], px = pivot%10, py = Math.floor(pivot/10);
+  const k0 = s.h ? px - s.x : py - s.y;
+  const order = [k0]; for (let k=0;k<s.len;k++) if (k!==k0) order.push(k);
+  for (const k of order){
+    const cand = {len:s.len, h:!s.h, on:true, x: s.h ? px : px - k, y: s.h ? py - k : py};
+    if (fits(S.ships, i, cand)){ S.ships[i] = cand; return; }
+  }
+  shake(); toast('Kein Platz zum Drehen.');
+}
+function shake(){
+  const sea = $('seaSetup'); if (!sea) return;
+  const b = sea.querySelector('.board'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+}
+
 /* ================= rendering ================= */
-function seaHTML(id, target, cls){
-  let h = `<div class="sea ${cls||''}" id="${id}"><div class="cols">`;
+function seaHTML(id, target){
+  let h = `<div class="sea" id="${id}"><div class="cols">`;
   for (const l of LETTERS) h += `<span>${l}</span>`;
   h += `</div><div class="rows">`;
   for (let i=1;i<=10;i++) h += `<span>${i}</span>`;
@@ -622,13 +682,13 @@ function paintBoard(id, m){
   const cells = sea.querySelector('.board').children;
   for (let c=0;c<100;c++){ const k = 'cell' + (m[c]||''); if (cells[c].className!==k) cells[c].className = k; }
 }
-function addShip(m, cells, base){
+function addShip(m, cells, base, replace){
   const h = cells.length<2 || cells[1]-cells[0]===1;
-  cells.forEach((c,i) => { m[c] = (m[c]||'') + ' ' + base + (h?' sh':' sv') + (i===0?' s0':'') + (i===cells.length-1?' s1':''); });
+  cells.forEach((c,i) => { m[c] = (replace ? '' : (m[c]||'')) + ' ' + base + (h?' sh':' sv') + (i===0?' s0':'') + (i===cells.length-1?' s1':''); });
 }
-function pipsHTML(fleet, deadLens){
+function pipsHTML(f, deadLens){
   const dead = deadLens.slice();
-  return `<div class="pips">` + fleet.map(len => {
+  return `<div class="pips">` + f.map(len => {
     const k = dead.indexOf(len); const d = k>=0; if (d) dead.splice(k,1);
     return `<span class="pip${d?' dead':''}" title="${NAMES[len]}">${'<i></i>'.repeat(len)}</span>`;
   }).join('') + `</div>`;
@@ -640,22 +700,29 @@ function screenName(){
   if (!started() && !(S.ready && S.peerReady)) return 'setup';
   return 'battle';
 }
-const RULES = `<details><summary>Regeln</summary><ul>
-  <li>Jeder stellt seine Flotte verdeckt auf. Schiffe dürfen sich nicht berühren, auch nicht über Eck.</li>
-  <li>Abwechselnd wird auf ein Feld geschossen, zum Beispiel C7.</li>
-  <li>Bei einem Treffer darfst du gleich noch einmal schießen.</li>
-  <li>Wer zuerst alle Schiffe des anderen versenkt hat, gewinnt.</li></ul></details>`;
+/* the board takes the largest square that fits the free space, so nothing ever has to scroll */
+function fitBoards(){
+  view.querySelectorAll('.fit').forEach(f => {
+    const sea = f.firstElementChild; if (!sea) return;
+    const side = Math.floor(Math.min(f.clientWidth, f.clientHeight, 448));
+    if (side > 0) sea.style.width = Math.max(side, 150) + 'px';
+  });
+}
+if ('ResizeObserver' in window) new ResizeObserver(fitBoards).observe(view);
+window.addEventListener('resize', fitBoards);
 
 function build(name){
   R.screen = name;
+  view.className = (name==='lobby' || name==='full' || name==='joining') ? 'scroll' : '';
   if (name==='lobby'){
     view.innerHTML = `
       <section class="hero">${seaHTML('seaDemo', false)}<p class="cap small soft">Zwei Handys, ein Link. Jeder sieht nur sein eigenes Blatt.</p></section>
       <section class="stack">
-        <div><div class="label">Flotte</div></div>
-        <div class="seg" id="fleetSeg">
-          <button type="button" data-fleet="klassisch">Klassisch<small>10 Schiffe, 30 Felder</small></button>
-          <button type="button" data-fleet="kurz">Kurz<small>5 Schiffe, 17 Felder</small></button>
+        <div class="label">Mit wie vielen Schiffen?</div>
+        <div class="stepper">
+          <button type="button" class="btn sq" id="btnLess" aria-label="Ein Schiff weniger">−</button>
+          <div class="mid"><div class="num" id="nShips"></div><div id="nPips"></div></div>
+          <button type="button" class="btn sq" id="btnMore" aria-label="Ein Schiff mehr">+</button>
         </div>
         <button type="button" class="btn primary" id="btnCreate">Neues Spiel starten</button>
       </section>
@@ -666,8 +733,7 @@ function build(name){
           <div class="grow"><input class="code-in" id="joinCode" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Code, 5 Zeichen"></div>
           <button type="submit" class="btn">Beitreten</button>
         </div>
-      </form>
-      ${RULES}`;
+      </form>`;
     const demo = {};
     addShip(demo,[12,13,14,15],'ship'); addShip(demo,[38,48,58],'ship dead'); addShip(demo,[71,72],'ship'); addShip(demo,[85,86,87,88,89],'ship');
     [38,48,58,13].forEach(c=>demo[c]+=' hit'); [5,27,41,66,93,60].forEach(c=>demo[c]=(demo[c]||'')+' miss');
@@ -686,79 +752,96 @@ function build(name){
   }
   else if (name==='setup'){
     view.innerHTML = `
-      <section class="note" id="invite">
-        <div class="label">Mitspieler einladen</div>
-        <div class="row"><div class="code grow" id="invCode"></div><button type="button" class="btn primary" id="btnShare">Link teilen</button></div>
-        <p class="small soft">Schick den Link an dein Gegenüber. Alternativ: Seite öffnen und den Code eintippen.</p>
-        <div id="linkWrap" hidden><input class="link-in" id="linkIn" readonly></div>
-        <button type="button" class="btn quiet" id="btnCopy" style="align-self:flex-start">Link kopieren</button>
+      <section class="slot" id="slot"></section>
+      <section class="hintrow">
+        <div class="grow"><div class="label">Flotte aufstellen</div><p class="small soft" id="setupHint"></p></div>
+        <button type="button" class="btn sq" id="btnOrient"></button>
       </section>
-      <section class="stack">
-        <div><h2>Stell deine Flotte auf</h2><p class="small soft" id="setupHint"></p></div>
-        ${seaHTML('seaSetup', false, 'big')}
-        <div class="row" id="setupBtns"></div>
-        <p class="small" id="oppState"></p>
-      </section>
-      ${RULES}
-      <div id="leaveBox"></div>`;
+      <section class="fit">${seaHTML('seaSetup', false)}</section>
+      <section class="tray" id="tray"></section>
+      <section class="btnrow" id="setupBtns"></section>`;
   }
   else if (name==='battle'){
     view.innerHTML = `
       <section class="status"><h2 id="stTitle"></h2><p class="small" id="stSub"></p></section>
-      <section class="stack">
-        <div class="label">Gegnerisches Gewässer</div>
-        ${seaHTML('seaTarget', true, 'big')}
-        <div id="fireBox"></div>
-      </section>
+      <div class="label">Gegnerisches Gewässer</div>
+      <section class="fit">${seaHTML('seaTarget', true)}</section>
+      <section class="firebox" id="fireBox"></section>
       <section class="mini">
-        <div><div class="label" style="margin-bottom:4px">Deine Flotte</div>${seaHTML('seaOwn', false)}</div>
+        <div class="own"><div class="label">Deine Flotte</div>${seaHTML('seaOwn', false)}</div>
         <div class="tally" id="tally"></div>
-      </section>
-      <div id="leaveBox"></div>`;
+      </section>`;
   }
+  fitBoards();
 }
 
 function paintConn(){
   const el = $('conn');
   if (!S.code){ el.hidden = true; return; }
   el.hidden = false;
-  $('connCode').textContent = S.code;
   let cls='wait', txt='Verbinde…';
   if (online()){ cls='on'; txt='Verbunden'; }
-  else if (R.peerLeft){ cls='off'; txt='Gegner ist weg'; }
-  else if (R.status==='waiting'){ cls='wait'; txt = S.guest ? 'Gegner offline' : 'Warte auf Mitspieler'; }
+  else if (R.peerLeft){ cls='off'; txt='Gegner weg'; }
+  else if (R.status==='waiting'){ cls='wait'; txt = S.guest ? 'Gegner offline' : 'Wartet'; }
   else if (R.status==='reconnecting'){ cls='off'; txt='Verbinde neu…'; }
-  else if (R.status==='nolib'){ cls='off'; txt='Kein Internet?'; }
+  else if (R.status==='nolib'){ cls='off'; txt='Kein Netz?'; }
   $('connDot').className = 'dot ' + cls;
   $('connText').textContent = txt;
-}
-function leaveHTML(){
-  return R.confirmLeave
-    ? `<div class="row"><span class="small grow">Spiel wirklich verlassen? Der Spielstand geht verloren.</span><button type="button" class="btn danger" id="btnLeaveYes">Verlassen</button><button type="button" class="btn" id="btnLeaveNo">Bleiben</button></div>`
-    : `<button type="button" class="btn quiet" id="btnLeave">Spiel verlassen</button>`;
 }
 function setHTML(id, html){ const el=$(id); if (el && el._h!==html){ el.innerHTML = html; el._h = html; } }
 function setText(id, t){ const el=$(id); if (el && el.textContent!==t) el.textContent = t; }
 
+function paintMenu(){
+  const sheet = $('sheet');
+  sheet.hidden = !R.menu;
+  if (!R.menu) return;
+  const inGame = !!S.code;
+  setHTML('panel', `
+    ${inGame ? `<div class="stack"><div class="label">Spielcode</div>
+      <div class="row"><div class="code grow">${S.code}</div><button type="button" class="btn primary sm" id="btnShare2">Link teilen</button></div>
+      ${R.showLink ? `<input class="link-in" id="linkIn" readonly value="${shareUrl()}">` : ''}</div><hr>` : ''}
+    <div class="stack"><div class="label">Regeln</div><ul>
+      <li>Jeder stellt seine Flotte verdeckt auf. Schiffe dürfen sich nicht berühren, auch nicht über Eck.</li>
+      <li>Abwechselnd wird auf ein Feld geschossen, zum Beispiel C7.</li>
+      <li>Bei einem Treffer darfst du gleich noch einmal schießen.</li>
+      <li>Wer zuerst alle Schiffe des anderen versenkt hat, gewinnt.</li></ul></div>
+    ${inGame ? `<hr>` + (R.confirmLeave
+      ? `<div class="stack"><p class="small">Spiel wirklich verlassen? Der Spielstand geht verloren.</p>
+         <div class="row"><button type="button" class="btn danger grow" id="btnLeaveYes">Verlassen</button><button type="button" class="btn grow" id="btnLeaveNo">Bleiben</button></div></div>`
+      : `<button type="button" class="btn danger" id="btnLeave">Spiel verlassen</button>`) : ''}
+    <button type="button" class="btn" id="btnClose">Schließen</button>`);
+}
+
 function paintSetupBoard(){
   const m = {};
-  S.ships.forEach((s,i) => {
-    const d = R.drag && R.drag.i===i && R.drag.moved ? R.drag : null;
-    const shown = d ? {len:s.len, h:s.h, x:d.x, y:d.y} : s;
-    addShip(m, cellsOf(shown), 'ship' + (d ? ' lift' + (d.ok?'':' bad') : ''));
-  });
+  const d = R.drag && R.drag.moved ? R.drag : null;
+  S.ships.forEach((s,i) => { if (s.on && !(d && d.i===i)) addShip(m, cellsOf(s), 'ship'); });
+  if (d && d.over){
+    const s = S.ships[d.i];
+    addShip(m, cellsOf({len:s.len, h:d.h, x:d.x, y:d.y, on:true}), 'ship lift' + (d.ok?'':' bad'), true);
+  }
   paintBoard('seaSetup', m);
-  const b = $('seaSetup') && $('seaSetup').querySelector('.board');
-  if (b) b.classList.toggle('drag', !S.ready);
+  const sea = $('seaSetup'); if (sea) sea.querySelector('.board').classList.toggle('drag', !S.ready);
+}
+function paintTray(){
+  if (R.pick!=null && (!S.ships[R.pick] || S.ships[R.pick].on)) R.pick = null;
+  if (R.pick==null && !S.ready) pickNext();
+  setHTML('tray', S.ships.map((s,i) =>
+    `<button type="button" class="tship${s.on?' used':''}${R.pick===i && !S.ready?' picked':''}" data-ship="${i}" ${S.ready?'disabled':''}
+       aria-label="${NAMES[s.len]}, ${s.len} Felder${s.on?', gesetzt':''}">${'<i></i>'.repeat(s.len)}</button>`).join(''));
 }
 
 function paint(){
   const name = screenName();
   if (name!==R.screen) build(name);
   paintConn();
+  paintMenu();
 
   if (name==='lobby'){
-    $('fleetSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.fleet===R.pickFleet)));
+    const f = FLEETS[R.pickFleet];
+    setText('nShips', R.pickFleet===1 ? '1 Schiff' : R.pickFleet + ' Schiffe');
+    setHTML('nPips', pipsHTML(f, []));
+    $('btnLess').disabled = R.pickFleet<=1; $('btnMore').disabled = R.pickFleet>=10;
   }
   else if (name==='joining'){
     setText('jCode', S.code);
@@ -767,28 +850,31 @@ function paint(){
       : 'Einen Moment…');
   }
   else if (name==='setup'){
-    const showInvite = S.role==='host' && !S.guest;
-    $('invite').hidden = !showInvite;
-    if (showInvite){
-      setText('invCode', S.code);
-      $('linkWrap').hidden = !R.showLink;
-      if ($('linkIn').value !== shareUrl()) $('linkIn').value = shareUrl();
+    const all = S.ships.length>0 && S.ships.every(s=>s.on);
+    /* top slot: invite while alone, opponent status afterwards (same height, so the board stays put) */
+    if (S.role==='host' && !S.guest){
+      setHTML('slot', `<span class="label">Code</span><span class="code grow">${S.code}</span><button type="button" class="btn primary sm" id="btnShare">Link teilen</button>`);
+    } else {
+      let opp;
+      if (!online()) opp = 'Dein Mitspieler ist gerade nicht verbunden.';
+      else if (S.peerReady) opp = S.ready ? 'Gleich geht es los…' : 'Dein Mitspieler ist bereit und wartet auf dich.';
+      else opp = S.ready ? 'Du bist bereit. Dein Mitspieler stellt noch auf.' : 'Dein Mitspieler stellt gerade auf.';
+      setHTML('slot', `<p class="small grow">${opp}</p>`);
     }
-    setText('setupHint', S.ready ? 'Deine Aufstellung steht.' : 'Schiff ziehen zum Verschieben, antippen zum Drehen. Schiffe dürfen sich nicht berühren.');
-    if (!R.drag) paintSetupBoard();
+    setText('setupHint', S.ready ? 'Deine Aufstellung steht.'
+      : all ? 'Ziehen verschiebt, Antippen dreht. Passt alles? Dann „Bereit“.'
+      : 'Markiertes Schiff: Feld antippen oder aufs Blatt ziehen.');
+    const ob = $('btnOrient');
+    ob.disabled = S.ready || all;
+    ob.setAttribute('aria-label', R.orient ? 'Ausrichtung: waagrecht. Antippen für senkrecht.' : 'Ausrichtung: senkrecht. Antippen für waagrecht.');
+    setHTML('btnOrient', `<span class="ori ${R.orient?'h':'v'}"><i></i><i></i><i></i></span>`);
+    if (!R.drag){ paintTray(); paintSetupBoard(); }
     setHTML('setupBtns', S.ready
-      ? `<button type="button" class="btn grow" id="btnUnready">Doch noch ändern</button>`
-      : `<button type="button" class="btn grow" id="btnShuffle">Neu mischen</button><button type="button" class="btn primary grow" id="btnReady">Bereit</button>`);
-    let opp;
-    if (!online()) opp = (S.role==='host' && !S.guest) ? 'Dein Mitspieler ist noch nicht da.' : 'Dein Mitspieler ist gerade nicht verbunden.';
-    else if (S.peerReady) opp = S.ready ? '' : 'Dein Mitspieler ist bereit und wartet auf dich.';
-    else opp = S.ready ? 'Du bist bereit. Dein Mitspieler stellt noch auf.' : 'Dein Mitspieler stellt gerade auf.';
-    setText('oppState', opp);
-    setHTML('leaveBox', leaveHTML());
+      ? `<button type="button" class="btn" id="btnUnready">Doch noch ändern</button>`
+      : `<button type="button" class="btn" id="btnRandom">Zufällig</button><button type="button" class="btn" id="btnClear" ${S.ships.some(s=>s.on)?'':'disabled'}>Leeren</button><button type="button" class="btn primary" id="btnReady" ${all?'':'disabled'}>Bereit</button>`);
   }
   else if (name==='battle'){
     const out = outcome(), t = turn(), l = lastShot();
-    /* headline */
     let title, sub='';
     if (out==='won') title = '<span class="hl">Gewonnen!</span>';
     else if (out==='lost') title = 'Verloren';
@@ -815,11 +901,7 @@ function paint(){
     /* target board */
     const m = {}, sunkLens = [];
     const firedSet = new Set(S.fired.map(f=>f.c));
-    for (const f of S.fired){
-      if (f.r==null) m[f.c] = ' pend';
-      else if (f.r==='m') m[f.c] = ' miss';
-      else m[f.c] = ' hit';
-    }
+    for (const f of S.fired) m[f.c] = f.r==null ? ' pend' : f.r==='m' ? ' miss' : ' hit';
     for (const f of S.fired) if (f.sunk){
       sunkLens.push(f.sunk.length);
       const mm = {}; addShip(mm, f.sunk, 'ship sunk');
@@ -837,9 +919,8 @@ function paint(){
     paintBoard('seaTarget', m);
     $('seaTarget').querySelector('.board').classList.toggle('locked', !canAim);
 
-    /* fire button / rematch */
     setHTML('fireBox', out
-      ? `<button type="button" class="btn primary" id="btnAgain" style="width:100%">Revanche</button>`
+      ? `<button type="button" class="btn primary" id="btnAgain">Revanche</button>`
       : `<button type="button" class="btn fire" id="btnFire" ${R.sel!=null && canAim && online() ? '' : 'disabled'}>${
           !canAim ? (t==='wait' ? 'Warte auf Antwort…' : 'Gegner zielt…')
           : !online() ? 'Keine Verbindung'
@@ -848,23 +929,37 @@ function paint(){
     /* own board */
     const o = {}, lost = [];
     const hitSet = new Set(S.recv.filter(f=>f.r==='h').map(f=>f.c));
-    S.ships.forEach(s => { const cs = cellsOf(s); const dead = cs.every(c=>hitSet.has(c)); if (dead) lost.push(s.len); addShip(o, cs, 'ship' + (dead?' dead':'')); });
+    S.ships.forEach(s => { const cs = cellsOf(s); if (!cs.length) return; const dead = cs.every(c=>hitSet.has(c)); if (dead) lost.push(s.len); addShip(o, cs, 'ship' + (dead?' dead':'')); });
     for (const f of S.recv) o[f.c] = (o[f.c]||'') + (f.r==='h' ? ' hit' : ' miss');
     if (l && !l.mine) o[l.c] = (o[l.c]||'') + ' last';
     paintBoard('seaOwn', o);
 
-    const fleet = FLEETS[S.fleet];
+    const f = fleet();
     setHTML('tally', `
-      <div><div class="label">Gegner</div><div class="small">${sunkLens.length} von ${fleet.length} versenkt</div>${pipsHTML(fleet, sunkLens)}</div>
-      <div><div class="label">Du</div><div class="small">${lost.length} von ${fleet.length} verloren</div>${pipsHTML(fleet, lost)}</div>`);
-    setHTML('leaveBox', leaveHTML());
+      <div><div class="label">Gegner</div><div class="small">${sunkLens.length} von ${f.length} versenkt</div>${pipsHTML(f, sunkLens)}</div>
+      <div><div class="label">Du</div><div class="small">${lost.length} von ${f.length} verloren</div>${pipsHTML(f, lost)}</div>`);
   }
 }
 
 /* ================= input ================= */
-view.addEventListener('click', e => {
+document.addEventListener('click', e => {
+  if (e.target.id==='sheet'){ R.menu=false; R.confirmLeave=false; paint(); return; }
+  /* the click that follows a tap already handled by the pointer handlers below (same spot, same moment) */
+  const g = R.tapGuard;
+  const guard = !!g && Date.now() - g.t < 600 && Math.abs(e.clientX - g.x) < 12 && Math.abs(e.clientY - g.y) < 12;
+  /* setup: tap an empty square to put the marked ship there */
+  const sc = e.target.closest('#seaSetup .cell');
+  if (sc){
+    if (R.screen==='setup' && !S.ready && !guard && !S.ships.some(s=>cellsOf(s).includes(+sc.dataset.c))) placeAt(+sc.dataset.c);
+    return;
+  }
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.fleet){ R.pickFleet = b.dataset.fleet; paint(); return; }
+  if (b.classList.contains('tship')){            /* keyboard path; touch is handled by the pointer handlers */
+    if (guard || S.ready) return;
+    const i = +b.dataset.ship, s = S.ships[i];
+    if (s.on){ s.on = false; R.pick = i; } else if (R.pick===i) R.orient = !R.orient; else R.pick = i;
+    save(); paint(); return;
+  }
   if (b.classList.contains('cell') && R.screen==='battle'){
     const c = +b.dataset.c;
     if (outcome() || turn()!=='me') return;
@@ -873,11 +968,18 @@ view.addEventListener('click', e => {
     R.sel = c; paint(); return;
   }
   switch (b.id){
+    case 'btnMenu': R.menu = true; R.confirmLeave = false; paint(); break;
+    case 'btnClose': R.menu = false; R.confirmLeave = false; paint(); break;
+    case 'btnLess': case 'btnMore':
+      R.pickFleet = clamp(R.pickFleet + (b.id==='btnMore'?1:-1), 1, 10);
+      try{ localStorage.setItem(PREF, String(R.pickFleet)); }catch(err){}
+      paint(); break;
     case 'btnCreate': createGame(); break;
-    case 'btnBack': R.full=false; stopLink(); S=blank(); save(); setHash(''); R.status='idle'; paint(); break;
-    case 'btnShare': share(); break;
-    case 'btnCopy': copyLink(); break;
-    case 'btnShuffle': S.ships = randomLayout(FLEETS[S.fleet]); save(); paint(); break;
+    case 'btnBack': toLobby(); break;
+    case 'btnShare': case 'btnShare2': share(); break;
+    case 'btnOrient': R.orient = !R.orient; paint(); break;
+    case 'btnRandom': S.ships = randomLayout(fleet()); R.pick = null; save(); paint(); break;
+    case 'btnClear': S.ships = blankShips(fleet()); R.pick = null; save(); paint(); break;
     case 'btnReady': setReady(true); break;
     case 'btnUnready': setReady(false); break;
     case 'btnFire': fire(); break;
@@ -890,62 +992,62 @@ view.addEventListener('click', e => {
 view.addEventListener('submit', e => { e.preventDefault(); if (e.target.id==='joinForm') joinGame($('joinCode').value); });
 view.addEventListener('input', e => { if (e.target.id==='joinCode'){ const v = cleanCode(e.target.value); if (v!==e.target.value) e.target.value = v; } });
 
-/* placing ships: drag to move, tap to rotate */
-function boardPos(board, e){
-  const r = board.getBoundingClientRect();
-  return { x: Math.max(0, Math.min(9, Math.floor((e.clientX - r.left) / r.width * 10))),
-           y: Math.max(0, Math.min(9, Math.floor((e.clientY - r.top) / r.height * 10))) };
-}
+/* placing ships with the finger: drag from the harbour or across the sheet, tap a placed ship to turn it */
 view.addEventListener('pointerdown', e => {
   if (R.screen!=='setup' || S.ready || R.drag) return;
-  const cell = e.target.closest('#seaSetup .cell'); if (!cell) return;
-  const c = +cell.dataset.c;
-  const i = S.ships.findIndex(s=>cellsOf(s).includes(c)); if (i<0) return;
-  const s = S.ships[i], board = cell.parentNode;
+  let i = -1, from = 'board', c = null, off = 0;
+  const tb = e.target.closest('.tship');
+  if (tb){ i = +tb.dataset.ship; from = 'tray'; }
+  else {
+    const cell = e.target.closest('#seaSetup .cell'); if (!cell) return;
+    c = +cell.dataset.c;
+    i = S.ships.findIndex(s=>cellsOf(s).includes(c)); if (i<0) return;
+    const s = S.ships[i]; off = s.h ? c%10 - s.x : Math.floor(c/10) - s.y;
+  }
+  const s = S.ships[i]; if (!s) return;
   e.preventDefault();
-  try{ board.setPointerCapture(e.pointerId); }catch(err){}
-  R.drag = { i, board, id:e.pointerId, off: s.h ? c%10 - s.x : Math.floor(c/10) - s.y, x:s.x, y:s.y, ok:true, sx:e.clientX, sy:e.clientY, moved:false, cell:c };
+  try{ view.setPointerCapture(e.pointerId); }catch(err){}
+  R.drag = { i, from, id:e.pointerId, cell:c, sx:e.clientX, sy:e.clientY, moved:false, over:false, ok:false,
+             h: s.on ? s.h : R.orient, off: from==='tray' ? Math.floor((s.len-1)/2) : off, x:s.x, y:s.y };
 });
 view.addEventListener('pointermove', e => {
   const d = R.drag; if (!d || e.pointerId!==d.id) return;
   if (!d.moved && Math.hypot(e.clientX-d.sx, e.clientY-d.sy) < 8) return;
   d.moved = true;
-  const s = S.ships[d.i], p = boardPos(d.board, e);
-  const x = Math.max(0, Math.min(s.h ? 10-s.len : 9, s.h ? p.x - d.off : p.x));
-  const y = Math.max(0, Math.min(s.h ? 9 : 10-s.len, s.h ? p.y : p.y - d.off));
-  d.x = x; d.y = y; d.ok = fits(S.ships, d.i, {len:s.len, h:s.h, x, y});
+  const s = S.ships[d.i], r = $('seaSetup').querySelector('.board').getBoundingClientRect(), cs = r.width/10;
+  const py = e.clientY - (d.from==='tray' ? cs*1.3 : 0);     /* from the harbour: show the ship above the finger */
+  d.over = e.clientX > r.left-cs && e.clientX < r.right+cs && py > r.top-cs && py < r.bottom+cs;
+  const col = clamp(Math.floor((e.clientX - r.left)/cs), 0, 9), row = clamp(Math.floor((py - r.top)/cs), 0, 9);
+  d.x = clamp(d.h ? col - d.off : col, 0, d.h ? 10-s.len : 9);
+  d.y = clamp(d.h ? row : row - d.off, 0, d.h ? 9 : 10-s.len);
+  d.ok = fits(S.ships, d.i, {len:s.len, h:d.h, x:d.x, y:d.y, on:true});
   paintSetupBoard();
 });
 function endDrag(e, cancelled){
   const d = R.drag; if (!d || e.pointerId!==d.id) return;
-  R.drag = null;
+  R.drag = null; R.tapGuard = {t:Date.now(), x:e.clientX, y:e.clientY};
   const s = S.ships[d.i];
-  if (!cancelled){
-    if (!d.moved) rotate(d.i, d.cell, d.board);
-    else if (d.ok){ s.x = d.x; s.y = d.y; save(); }
+  if (!cancelled && s){
+    if (!d.moved){
+      if (d.from==='tray'){ if (s.on){ s.on = false; R.pick = d.i; } else if (R.pick===d.i) R.orient = !R.orient; else R.pick = d.i; }
+      else rotate(d.i, d.cell);
+    }
+    else if (!d.over){ if (s.on){ s.on = false; R.pick = d.i; } }                 /* dragged off the sheet: back to the harbour */
+    else if (d.ok){ S.ships[d.i] = {len:s.len, h:d.h, x:d.x, y:d.y, on:true}; if (R.pick===d.i) R.pick = null; }
     else toast('Hier ist kein Platz. Schiffe dürfen sich nicht berühren.');
+    save();
   }
-  paintSetupBoard();
+  paint();
 }
 view.addEventListener('pointerup', e => endDrag(e, false));
 view.addEventListener('pointercancel', e => endDrag(e, true));
-function rotate(i, pivot, board){
-  const s = S.ships[i], px = pivot%10, py = Math.floor(pivot/10);
-  const k0 = s.h ? px - s.x : py - s.y;
-  const order = [k0]; for (let k=0;k<s.len;k++) if (k!==k0) order.push(k);
-  for (const k of order){
-    const cand = {len:s.len, h:!s.h, x: s.h ? px : px - k, y: s.h ? py - k : py};
-    if (fits(S.ships, i, cand)){ S.ships[i] = cand; save(); return; }
-  }
-  board.classList.remove('shake'); void board.offsetWidth; board.classList.add('shake');
-  toast('Kein Platz zum Drehen.');
-}
+document.addEventListener('gesturestart', e => e.preventDefault());   /* iOS: no pinch zoom on the board */
 
 /* ================= boot ================= */
 (function boot(){
   const hash = cleanCode(location.hash.slice(1));
   if (S.code){
-    if (!validLayout(S.ships, FLEETS[S.fleet]) && !started() && (S.role==='host' || S.met)) S.ships = randomLayout(FLEETS[S.fleet]);
+    if (!sameFleet(S.ships, fleet())) S.ships = blankShips(fleet());
     if (hash.length===5 && hash!==S.code && !started()){ joinGame(hash); return; }
     setHash(S.code); startLink(); wake();
   } else if (hash.length===5){ joinGame(hash); return; }

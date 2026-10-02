@@ -6,12 +6,12 @@ Schiffe versenken für zwei Smartphones. Beide öffnen dieselbe Seite, einer sta
 
 ## So geht's
 
-1. Seite öffnen, Flotte wählen (klassisch mit 10 Schiffen oder kurz mit 5) und „Neues Spiel starten“.
+1. Seite öffnen, mit − und + die Anzahl der Schiffe wählen (1 bis 10) und „Neues Spiel starten“.
 2. „Link teilen“ antippen und den Link an den Mitspieler schicken. Alternativ öffnet er die Seite und tippt den Code ein.
-3. Beide stellen ihre Schiffe auf: ziehen zum Verschieben, antippen zum Drehen. Dann „Bereit“.
+3. Beide stellen ihre Schiffe selbst auf: Das markierte Schiff landet auf dem Feld, das man antippt, oder man zieht es aus dem Hafen aufs Blatt. Ein gesetztes Schiff lässt sich ziehen (verschieben) und antippen (drehen). „Zufällig“ stellt alles automatisch auf. Dann „Bereit“.
 4. Abwechselnd ein Feld antippen und feuern. Bei einem Treffer darf man noch einmal.
 
-Der Spielstand wird auf dem jeweiligen Handy gespeichert. Seite neu laden oder Handy sperren ist kein Problem, das Spiel verbindet sich wieder.
+Das Spielfeld steht fest auf dem Bildschirm, während des Spiels scrollt nichts. Der Spielstand wird auf dem jeweiligen Handy gespeichert. Seite neu laden oder Handy sperren ist kein Problem, das Spiel verbindet sich wieder.
 
 ## Technik
 
