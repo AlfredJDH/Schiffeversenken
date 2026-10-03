@@ -299,7 +299,7 @@ function load(){
   }catch(e){}
   return null;
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function save(){ S.ts = Date.now(); try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 function loadPref(){ try{ const n = parseInt(localStorage.getItem(PREF), 10); if (FLEETS[n]) return n; }catch(e){} return 5; }
 function loadLvl(){ try{ const n = parseInt(localStorage.getItem(PREF_LVL), 10); if (LEVELS[n]) return n; }catch(e){} return 2; }
 
@@ -1176,6 +1176,13 @@ document.addEventListener('gesturestart', e => e.preventDefault());   /* iOS: no
 /* ================= boot ================= */
 (function boot(){
   const hash = cleanCode(location.hash.slice(1));
+  /* Opening the app lands on the start page. Only a game worth coming back to is resumed: a battle that is
+     under way, or a game with a second player (their link has to keep working) — and nothing older than 12 hours. */
+  if (S.code){
+    const stale = !S.ts || Date.now() - S.ts > 12*3600*1000;
+    const live = FLEETS[S.fleet] && S.fired.length + S.recv.length > 0 && !outcome();
+    if (stale || (S.solo && !live)){ S = blank(); save(); }
+  }
   if (S.code){
     if (!sameFleet(S.ships, fleet())) S.ships = blankShips(fleet());
     if (S.solo && !(S.bot && LEVELS[S.bot.lvl] && validLayout(S.bot.ships, fleet()))) S.bot = {lvl:R.pickLvl, ships:randomLayout(fleet())};
