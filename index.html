@@ -32,6 +32,9 @@
   --marker:#ffe24a;     /* highlighter: your turn, your target */
   --on-marker:#262b36;
   --ok:#1f8a4c;
+  --water:#e4f0fb;      /* a square that was shot at and held only water */
+  --fx-hit:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23e8501f' d='M12.5 1.5c.6 3.6 5.5 6 5.5 12a6.5 6.5 0 0 1-13 0c0-2.6 1.3-4.4 2.6-6 .3 1.6 1 2.6 2 3 .1-3.4 1.2-6.4 2.9-9z'/%3E%3Cpath fill='%23ffc531' d='M12 12c.4 1.9 2.7 3 2.7 5.3a2.7 2.7 0 0 1-5.4 0c0-1.7 1.7-3 2.7-5.3z'/%3E%3C/svg%3E");
+  --fx-miss:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%232f7fd1' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M2.5 9.5c2-2.4 4.3-2.4 6.3 0s4.3 2.4 6.3 0 4.3-2.4 6.4 0'/%3E%3Cpath d='M2.5 16c2-2.4 4.3-2.4 6.3 0s4.3 2.4 6.3 0 4.3-2.4 6.4 0'/%3E%3C/g%3E%3C/svg%3E");
   --display:"Kalam","Segoe Print","Bradley Hand",cursive;
   --body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:light;
@@ -40,6 +43,7 @@
   :root{
     --paper:#0f1626; --sheet:#162038; --rule:#30415f; --ink:#93b4ff; --on-ink:#0f1626;
     --pencil:#e8ebf2; --soft:#9aa6bd; --red:#ff6f61; --marker:#f2d544; --on-marker:#1a1f2b; --ok:#5fd08d;
+    --water:#1b3152; --fx-miss:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='%237db8f5' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M2.5 9.5c2-2.4 4.3-2.4 6.3 0s4.3 2.4 6.3 0 4.3-2.4 6.4 0'/%3E%3Cpath d='M2.5 16c2-2.4 4.3-2.4 6.3 0s4.3 2.4 6.3 0 4.3-2.4 6.4 0'/%3E%3C/g%3E%3C/svg%3E");
     color-scheme:dark;
   }
 }
@@ -65,7 +69,9 @@ input{user-select:text; -webkit-user-select:text}
 #view > .fit{flex:1 1 0; min-height:0; min-width:0; display:flex; align-items:center; justify-content:center}
 
 /* ---------- header ---------- */
-.top{display:flex; align-items:center; gap:10px; height:40px; flex:none}
+.top{display:flex; align-items:center; gap:10px; height:44px; flex:none}
+.burger{display:flex; flex-direction:column; gap:4px}
+.burger i{display:block; width:20px; height:2.5px; border-radius:2px; background:currentColor}
 .top h1{font:700 1.3rem/1 var(--display); margin:0; padding-top:.2em; white-space:nowrap; flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis}
 .conn{display:flex; align-items:center; gap:6px; font-size:.8rem; color:var(--soft); white-space:nowrap}
 .dot{width:9px; height:9px; border-radius:50%; background:var(--soft); flex:none}
@@ -147,15 +153,11 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .cell.bad::before{background:var(--red)}
 
 /* marks */
-.cell.miss::after{inset:36%; border-radius:50%; background:var(--ink); opacity:.55; z-index:2}
+.cell.miss{background:var(--water)}
+.cell.miss::after{inset:10%; background:var(--fx-miss) center/contain no-repeat; z-index:2}   /* water: waves */
 .cell.nope::after{inset:42%; border-radius:50%; background:var(--soft); opacity:.4; z-index:2}
 .cell.pend::after{inset:26%; border-radius:50%; border:2px dashed var(--soft); z-index:2; animation:spin 2.4s linear infinite}
-.cell.hit::after{
-  inset:12%; z-index:2;
-  background:
-    linear-gradient(45deg, transparent 44%, var(--red) 44% 56%, transparent 56%),
-    linear-gradient(-45deg, transparent 44%, var(--red) 44% 56%, transparent 56%);
-}
+.cell.hit::after{inset:3%; background:var(--fx-hit) center/contain no-repeat; z-index:2}       /* hit: fire */
 .cell.sel{background:var(--marker)}
 .cell.sel::after{inset:18%; border:2px solid var(--on-marker); border-radius:50%; z-index:2}
 .cell.last{box-shadow:0 0 0 2px var(--marker) inset; z-index:3}
@@ -170,17 +172,15 @@ button.cell{cursor:pointer; touch-action:manipulation}
 @media (prefers-reduced-motion: reduce){ .cell::after, .board{animation:none!important} }
 
 /* ---------- lobby ---------- */
-.hero{display:flex; flex-direction:column; align-items:center; gap:6px}
-.hero .sea{width:13rem; --lab:.95rem}
-.hero .sea .cols, .hero .sea .rows{font-size:.65rem}
-.hero .cap{text-align:center}
 .stepper{display:flex; align-items:center; gap:12px; border:2px solid var(--rule); border-radius:12px; padding:8px 10px; background:var(--sheet)}
 .stepper .mid{flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center}
 .stepper .num{font:700 1.5rem/1 var(--display); padding-top:.15em}
-.skill{border:2px solid var(--rule); border-radius:12px; padding:10px 12px; background:var(--sheet); display:flex; flex-direction:column; gap:6px}
-.skill .who{font:700 1.35rem/1 var(--display); padding-top:.15em}
-.skill input[type=range]{width:100%; margin:4px 0; accent-color:var(--ink); height:28px; touch-action:pan-y}
-.skill .ends{display:flex; justify-content:space-between; font-size:.72rem; color:var(--soft)}
+.mode{border:2px solid var(--rule); border-radius:12px; padding:12px; background:var(--sheet); display:flex; flex-direction:column; gap:8px}
+.mode h3{font:700 1.3rem/1.1 var(--display); margin:0; padding-top:.15em}
+.mode .who{font:700 1.15rem/1 var(--display); padding-top:.15em}
+.mode input[type=range]{width:100%; margin:0; accent-color:var(--ink); height:30px; touch-action:pan-y}
+.mode .ends{display:flex; justify-content:space-between; font-size:.72rem; color:var(--soft); margin-top:-6px}
+.mode #lvlDesc{min-height:2.6em}
 .slot .lvl{flex:1 1 0; min-width:0; text-align:center; font:700 1.2rem/1 var(--display); padding-top:.2em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
 /* ---------- setup ---------- */
@@ -246,7 +246,7 @@ button.cell{cursor:pointer; touch-action:manipulation}
   <header class="top">
     <h1>Schiffe versenken</h1>
     <div class="conn" id="conn" hidden><span class="dot" id="connDot"></span><span id="connText"></span></div>
-    <button type="button" class="btn sm" id="btnMenu">Menü</button>
+    <button type="button" class="btn sq" id="btnMenu" aria-label="Menü"><span class="burger"><i></i><i></i><i></i></span></button>
   </header>
   <main id="view"></main>
 </div>
@@ -838,7 +838,6 @@ function build(name){
   view.className = (name==='lobby' || name==='full' || name==='joining') ? 'scroll' : '';
   if (name==='lobby'){
     view.innerHTML = `
-      <section class="hero">${seaHTML('seaDemo', false)}<p class="cap small soft">Allein gegen den Computer oder zu zweit auf zwei Handys.</p></section>
       <section class="stack">
         <div class="label">Mit wie vielen Schiffen?</div>
         <div class="stepper">
@@ -847,32 +846,26 @@ function build(name){
           <button type="button" class="btn sq" id="btnMore" aria-label="Ein Schiff mehr">+</button>
         </div>
       </section>
-      <section class="stack">
-        <div class="label">Gegen den Computer</div>
-        <div class="skill">
-          <div class="row"><span class="small soft grow">Können des Computers</span><span class="who" id="lvlName"></span></div>
-          <input type="range" id="lvl" min="1" max="5" step="1" aria-label="Können des Computers">
-          <div class="ends"><span>leicht</span><span>schwer</span></div>
-          <p class="small soft" id="lvlDesc"></p>
-        </div>
-        <button type="button" class="btn primary" id="btnSolo">Gegen den Computer spielen</button>
+      <section class="mode">
+        <h3>Solo Spiel</h3>
+        <div class="row"><span class="small soft grow">Können des Computers</span><span class="who" id="lvlName"></span></div>
+        <input type="range" id="lvl" min="1" max="5" step="1" aria-label="Können des Computers">
+        <div class="ends"><span>leicht</span><span>schwer</span></div>
+        <p class="small soft" id="lvlDesc"></p>
+        <button type="button" class="btn primary" id="btnSolo">Solo Spiel starten</button>
       </section>
-      <hr>
-      <section class="stack">
-        <div class="label">Zu zweit auf zwei Handys</div>
-        <button type="button" class="btn primary" id="btnCreate">Neues Spiel starten</button>
+      <section class="mode">
+        <h3>Spieler einladen</h3>
+        <p class="small soft">Du bekommst einen Link, den du deinem Gegenüber schickst.</p>
+        <button type="button" class="btn primary" id="btnCreate">Spieler einladen</button>
       </section>
-      <form class="stack" id="joinForm">
-        <label class="label" for="joinCode">Einem Spiel beitreten</label>
+      <form class="mode" id="joinForm">
+        <h3><label for="joinCode">Als Spieler beitreten</label></h3>
         <div class="row">
           <div class="grow"><input class="code-in" id="joinCode" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Code, 5 Zeichen"></div>
-          <button type="submit" class="btn">Beitreten</button>
+          <button type="submit" class="btn primary">Beitreten</button>
         </div>
       </form>`;
-    const demo = {};
-    addShip(demo,[12,13,14,15],'ship'); addShip(demo,[38,48,58],'ship dead'); addShip(demo,[71,72],'ship'); addShip(demo,[85,86,87,88,89],'ship');
-    [38,48,58,13].forEach(c=>demo[c]+=' hit'); [5,27,41,66,93,60].forEach(c=>demo[c]=(demo[c]||'')+' miss');
-    paintBoard('seaDemo', demo);
     const pre = cleanCode(location.hash.slice(1)); if (pre.length===5) $('joinCode').value = pre;
   }
   else if (name==='full'){
