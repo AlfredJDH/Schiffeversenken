@@ -180,7 +180,6 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .mode .who{font:700 1.15rem/1 var(--display); padding-top:.15em}
 .mode input[type=range]{width:100%; margin:0; accent-color:var(--ink); height:30px; touch-action:pan-y}
 .mode .ends{display:flex; justify-content:space-between; font-size:.72rem; color:var(--soft); margin-top:-6px}
-.mode #lvlDesc{min-height:2.6em}
 .slot .lvl{flex:1 1 0; min-width:0; text-align:center; font:700 1.2rem/1 var(--display); padding-top:.2em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
 /* ---------- setup ---------- */
@@ -736,12 +735,13 @@ function setReady(v){
   S.ready = v; save(); send({t:'ready', ready:v}); paint();
 }
 function rematch(){ resetGame(S.g + 1); save(); send({t:'again'}); sendHello(); paint(); }
-async function share(){
+async function share(quiet){
   const url = shareUrl();
   if (navigator.share){
     try{ await navigator.share({title:'Schiffe versenken', text:'Komm in mein Spiel!', url}); return; }
     catch(e){ if (e && e.name==='AbortError') return; }
   }
+  if (quiet) return;      /* straight after creating the game: the "Link teilen" button stays as the fallback */
   const fallback = () => { R.showLink = true; R.menu = true; paint(); const i=$('linkIn'); if(i){ i.focus(); i.select(); } toast('Link markiert. Jetzt kopieren.'); };
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(()=>toast('Link kopiert'), fallback);
   else fallback();
@@ -851,14 +851,9 @@ function build(name){
         <div class="row"><span class="small soft grow">Können des Computers</span><span class="who" id="lvlName"></span></div>
         <input type="range" id="lvl" min="1" max="5" step="1" aria-label="Können des Computers">
         <div class="ends"><span>leicht</span><span>schwer</span></div>
-        <p class="small soft" id="lvlDesc"></p>
         <button type="button" class="btn primary" id="btnSolo">Solo Spiel starten</button>
       </section>
-      <section class="mode">
-        <h3>Spieler einladen</h3>
-        <p class="small soft">Du bekommst einen Link, den du deinem Gegenüber schickst.</p>
-        <button type="button" class="btn primary" id="btnCreate">Spieler einladen</button>
-      </section>
+      <button type="button" class="btn primary" id="btnCreate">Mitspieler-Link erstellen</button>
       <form class="mode" id="joinForm">
         <h3><label for="joinCode">Als Spieler beitreten</label></h3>
         <div class="row">
@@ -970,7 +965,7 @@ function paint(){
     setHTML('nPips', pipsHTML(f, []));
     $('btnLess').disabled = R.pickFleet<=1; $('btnMore').disabled = R.pickFleet>=10;
     if ($('lvl').value !== String(R.pickLvl)) $('lvl').value = String(R.pickLvl);
-    setText('lvlName', LEVELS[R.pickLvl][0]); setText('lvlDesc', LEVELS[R.pickLvl][1]);
+    setText('lvlName', LEVELS[R.pickLvl][0]);
   }
   else if (name==='joining'){
     setText('jCode', S.code);
@@ -1108,7 +1103,7 @@ document.addEventListener('click', e => {
       R.pickFleet = clamp(R.pickFleet + (b.id==='btnMore'?1:-1), 1, 10);
       try{ localStorage.setItem(PREF, String(R.pickFleet)); }catch(err){}
       paint(); break;
-    case 'btnCreate': createGame(); break;
+    case 'btnCreate': createGame(); share(true); break;
     case 'btnSolo': createSolo(); break;
     case 'btnLvlLess': setLvl(S.bot.lvl - 1); break;
     case 'btnLvlMore': setLvl(S.bot.lvl + 1); break;
