@@ -15,7 +15,7 @@ Das Spielfeld steht fest auf dem Bildschirm, während des Spiels scrollt nichts.
 
 ## Solo Spiel gegen den Computer
 
-Auf der Startseite unter „Solo Spiel“ den Regler „Können des Computers“ einstellen und „Solo Spiel starten“ antippen. Es gibt fünf Stufen, vom Leichtmatrosen (schießt planlos) bis zum Admiral (rechnet aus, wo die Schiffe am wahrscheinlichsten liegen). Die Stufe lässt sich vor jeder Partie beim Aufstellen noch ändern. Dieser Modus braucht keine Internetverbindung zum Mitspieler.
+Auf der Startseite unter „Solo Spiel“ den Regler „Können des Computers“ einstellen und „Solo Spiel starten“ antippen. Es gibt fünf Stufen, vom Leichtmatrosen (schießt planlos) bis zum Admiral (rechnet aus, wo die Schiffe am wahrscheinlichsten liegen). Im Menü (oben rechts) startet „Neues Spiel“ eine neue Partie mit denselben Einstellungen, „Zum Hauptmenü“ führt zurück zur Startseite. Dieser Modus braucht keine Internetverbindung zum Mitspieler.
 
 ## Technik
 

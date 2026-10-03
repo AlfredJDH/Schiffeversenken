@@ -182,7 +182,7 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .mode .who{font:700 1.15rem/1 var(--display); padding-top:.15em}
 .mode input[type=range]{width:100%; margin:0; accent-color:var(--ink); height:30px; touch-action:pan-y}
 .mode .ends{display:flex; justify-content:space-between; font-size:.72rem; color:var(--soft); margin-top:-8px}
-.slot .lvl{flex:1 1 0; min-width:0; text-align:center; font:700 1.2rem/1 var(--display); padding-top:.2em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
 
 /* ---------- setup ---------- */
 .slot{height:3rem; display:flex; align-items:center; gap:10px}
@@ -307,7 +307,7 @@ let S = load() || blank();
 /* runtime only */
 const R = { screen:null, status:'idle', peer:null, conn:null, pending:null, lastSeen:0, probe:0, backoff:0, restartTimer:null, dialTimer:null,
             hostOffline:false, peerLeft:false, full:false, sel:null, drag:null, tapGuard:null, pick:null, orient:true,
-            menu:false, confirmLeave:false, pickFleet:loadPref(), pickLvl:loadLvl(), botTimer:null, showLink:false };
+            menu:false, pickFleet:loadPref(), pickLvl:loadLvl(), botTimer:null, showLink:false };
 
 /* ================= fleet geometry ================= */
 function cellsOf(s){ const a=[]; if (!s.on) return a; for(let i=0;i<s.len;i++) a.push(s.h ? s.y*10+s.x+i : (s.y+i)*10+s.x); return a; }
@@ -730,7 +730,7 @@ function joinGame(code){
   S.code = code; S.role='guest'; S.token = rand(16, 'abcdefghijklmnopqrstuvwxyz0123456789');
   R.full=false; R.hostOffline=false; R.backoff=0; R.pick=null; R.orient=true; save(); setHash(code); startLink(); wake(); paint();
 }
-function toLobby(){ R.full=false; clearTimeout(R.botTimer); R.botTimer=null; stopLink(); S = blank(); save(); setHash(''); R.status='idle'; R.sel=null; R.menu=false; R.confirmLeave=false; paint(); }
+function toLobby(){ R.full=false; clearTimeout(R.botTimer); R.botTimer=null; stopLink(); S = blank(); save(); setHash(''); R.status='idle'; R.sel=null; R.menu=false; paint(); }
 function leaveGame(){ send({t:'bye'}); setTimeout(toLobby, 60); }
 function setReady(v){
   if (v && !validLayout(S.ships, fleet())) return;
@@ -929,10 +929,8 @@ function paintMenu(){
       <li>Abwechselnd wird auf ein Feld geschossen, zum Beispiel C7.</li>
       <li>Bei einem Treffer darfst du gleich noch einmal schießen.</li>
       <li>Wer zuerst alle Schiffe des anderen versenkt hat, gewinnt.</li></ul></div>
-    ${inGame ? `<hr>` + (R.confirmLeave
-      ? `<div class="stack"><p class="small">Spiel wirklich verlassen? Der Spielstand geht verloren.</p>
-         <div class="row"><button type="button" class="btn danger grow" id="btnLeaveYes">Verlassen</button><button type="button" class="btn grow" id="btnLeaveNo">Bleiben</button></div></div>`
-      : `<button type="button" class="btn danger" id="btnLeave">Spiel verlassen</button>`) : ''}
+    ${inGame ? `<hr><button type="button" class="btn primary" id="btnNew">Neues Spiel</button>
+      <button type="button" class="btn" id="btnHome">Zum Hauptmenü</button>` : ''}
     <button type="button" class="btn" id="btnClose">Schließen</button>`);
 }
 
@@ -979,12 +977,9 @@ function paint(){
   else if (name==='setup'){
     const all = S.ships.length>0 && S.ships.every(s=>s.on);
     /* top slot: invite while alone, opponent status afterwards (same height, so the board stays put) */
-    if (S.solo){
-      setHTML('slot', `<span class="label">Computer</span>
-        <button type="button" class="btn sq sm" id="btnLvlLess" aria-label="Leichter" ${S.bot.lvl<=1?'disabled':''}>−</button>
-        <span class="lvl">${LEVELS[S.bot.lvl][0]}</span>
-        <button type="button" class="btn sq sm" id="btnLvlMore" aria-label="Schwerer" ${S.bot.lvl>=5?'disabled':''}>+</button>`);
-    } else if (S.role==='host' && !S.guest){
+    $('slot').hidden = !!S.solo;
+    if (S.solo){ /* nothing to show: the skill was chosen on the start page */ }
+    else if (S.role==='host' && !S.guest){
       setHTML('slot', `<span class="label">Code</span><span class="code grow">${S.code}</span><button type="button" class="btn primary sm" id="btnShare">Link teilen</button>`);
     } else {
       let opp;
@@ -1075,7 +1070,7 @@ function paint(){
 
 /* ================= input ================= */
 document.addEventListener('click', e => {
-  if (e.target.id==='sheet'){ R.menu=false; R.confirmLeave=false; paint(); return; }
+  if (e.target.id==='sheet'){ R.menu=false; paint(); return; }
   /* the click that follows a tap already handled by the pointer handlers below (same spot, same moment) */
   const g = R.tapGuard;
   const guard = !!g && Date.now() - g.t < 600 && Math.abs(e.clientX - g.x) < 12 && Math.abs(e.clientY - g.y) < 12;
@@ -1100,16 +1095,14 @@ document.addEventListener('click', e => {
     R.sel = c; paint(); return;
   }
   switch (b.id){
-    case 'btnMenu': R.menu = true; R.confirmLeave = false; paint(); break;
-    case 'btnClose': R.menu = false; R.confirmLeave = false; paint(); break;
+    case 'btnMenu': R.menu = true; paint(); break;
+    case 'btnClose': R.menu = false; paint(); break;
     case 'btnLess': case 'btnMore':
       R.pickFleet = clamp(R.pickFleet + (b.id==='btnMore'?1:-1), 1, 10);
       try{ localStorage.setItem(PREF, String(R.pickFleet)); }catch(err){}
       paint(); break;
     case 'btnCreate': createGame(); share(true); break;
     case 'btnSolo': createSolo(); break;
-    case 'btnLvlLess': setLvl(S.bot.lvl - 1); break;
-    case 'btnLvlMore': setLvl(S.bot.lvl + 1); break;
     case 'btnBack': toLobby(); break;
     case 'btnShare': case 'btnShare2': share(); break;
     case 'btnOrient': R.orient = !R.orient; paint(); break;
@@ -1119,9 +1112,8 @@ document.addEventListener('click', e => {
     case 'btnUnready': setReady(false); break;
     case 'btnFire': fire(); break;
     case 'btnAgain': rematch(); break;
-    case 'btnLeave': R.confirmLeave = true; paint(); break;
-    case 'btnLeaveNo': R.confirmLeave = false; paint(); break;
-    case 'btnLeaveYes': leaveGame(); break;
+    case 'btnNew': R.menu = false; rematch(); break;
+    case 'btnHome': R.menu = false; leaveGame(); break;
   }
 });
 view.addEventListener('submit', e => { e.preventDefault(); if (e.target.id==='joinForm') joinGame($('joinCode').value); });
