@@ -155,6 +155,7 @@ button.cell{cursor:pointer; touch-action:manipulation}
 /* marks */
 .cell.miss{background:var(--water)}
 .cell.miss::after{inset:10%; background:var(--fx-miss) center/contain no-repeat; z-index:2}   /* water: waves */
+.cell.nope::after{inset:42%; border-radius:50%; background:var(--soft); opacity:.4; z-index:2}   /* next to a sunk ship: cannot hold a ship */
 .cell.pend::after{inset:26%; border-radius:50%; border:2px dashed var(--soft); z-index:2; animation:spin 2.4s linear infinite}
 .cell.hit::after{inset:3%; background:var(--fx-hit) center/contain no-repeat; z-index:2}       /* hit: fire */
 .cell.sel{background:var(--marker)}
@@ -1043,13 +1044,14 @@ function paint(){
       sunkLens.push(f.sunk.length);
       const mm = {}; addShip(mm, f.sunk, 'ship sunk');
       f.sunk.forEach(c => m[c] = (m[c]||'') + mm[c]);
+      around(f.sunk).forEach(c => { if (!firedSet.has(c)) m[c] = ' nope'; });
     }
     if (out && S.reveal) S.reveal.forEach(s => {
       const cs = cellsOf(s); if (cs.every(c=>firedSet.has(c) && (m[c]||'').includes('sunk'))) return;
       const mm = {}; addShip(mm, cs, 'ship ghost'); cs.forEach(c => m[c] = (m[c]||'') + mm[c]);
     });
     const canAim = !out && t==='me';
-    if (R.sel!=null && (!canAim || firedSet.has(R.sel))) R.sel = null;
+    if (R.sel!=null && (!canAim || firedSet.has(R.sel) || (m[R.sel]||'').includes('nope'))) R.sel = null;
     if (R.sel!=null) m[R.sel] = (m[R.sel]||'') + ' sel';
     if (l && l.mine) m[l.c] = (m[l.c]||'') + ' last';
     paintBoard('seaTarget', m);
@@ -1100,7 +1102,7 @@ document.addEventListener('click', e => {
   if (b.classList.contains('cell') && R.screen==='battle'){
     const c = +b.dataset.c;
     if (outcome() || turn()!=='me') return;
-    if (S.fired.some(f=>f.c===c)) return;
+    if (S.fired.some(f=>f.c===c) || b.classList.contains('nope')) return;
     if (R.sel===c){ fire(); return; }
     R.sel = c; paint(); return;
   }
