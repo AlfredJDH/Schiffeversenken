@@ -187,6 +187,9 @@ button.cell{cursor:pointer; touch-action:manipulation}
 /* ---------- setup ---------- */
 .slot{height:3rem; display:flex; align-items:center; gap:10px}
 .hintrow{height:2.9rem; display:flex; align-items:center; gap:10px}
+.orow{height:40px; display:flex; align-items:center; gap:10px}
+.orow .btn{display:inline-flex; align-items:center; gap:8px; min-width:10.5rem}
+.oribox{width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; flex:none}
 .ori{display:inline-flex; gap:1px}
 .ori i{width:7px; height:9px; background:currentColor; display:block}
 .ori.v{flex-direction:column}
@@ -881,9 +884,12 @@ function build(name){
       <section class="slot" id="slot"></section>
       <section class="hintrow">
         <div class="grow"><div class="label">Flotte aufstellen</div><p class="small soft" id="setupHint"></p></div>
-        <button type="button" class="btn sq" id="btnOrient"></button>
       </section>
       <section class="fit">${seaHTML('seaSetup', false)}</section>
+      <section class="orow">
+        <span class="label">Ausrichtung</span>
+        <button type="button" class="btn sm" id="btnOrient"></button>
+      </section>
       <section class="tray" id="tray"></section>
       <section class="btnrow" id="setupBtns"></section>`;
   }
@@ -994,7 +1000,8 @@ function paint(){
     const ob = $('btnOrient');
     ob.disabled = S.ready || all;
     ob.setAttribute('aria-label', R.orient ? 'Ausrichtung: waagrecht. Antippen für senkrecht.' : 'Ausrichtung: senkrecht. Antippen für waagrecht.');
-    setHTML('btnOrient', `<span class="ori ${R.orient?'h':'v'}"><i></i><i></i><i></i></span>`);
+    setHTML('btnOrient', `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>
+      <span class="oribox"><span class="ori ${R.orient?'h':'v'}"><i></i><i></i><i></i></span></span><span>${R.orient?'waagrecht':'senkrecht'}</span>`);
     if (!R.drag){ paintTray(); paintSetupBoard(); }
     setHTML('setupBtns', S.ready
       ? `<button type="button" class="btn" id="btnUnready">Doch noch ändern</button>`
