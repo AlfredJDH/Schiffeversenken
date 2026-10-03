@@ -63,7 +63,7 @@ input{user-select:text; -webkit-user-select:text}
   padding:calc(8px + env(safe-area-inset-top,0px)) 16px calc(10px + env(safe-area-inset-bottom,0px));
 }
 #view{flex:1 1 0; min-height:0; display:flex; flex-direction:column; gap:8px; overflow:hidden}
-#view.scroll{overflow-y:auto; overscroll-behavior:contain; gap:14px; padding-bottom:12px}
+#view.scroll{overflow-y:auto; overscroll-behavior:contain; gap:12px; padding-bottom:12px}
 #view:not(.scroll){touch-action:none}   /* game screens: taps only, the page can neither pan nor zoom */
 #view > *{flex:none}
 #view > .fit{flex:1 1 0; min-height:0; min-width:0; display:flex; align-items:center; justify-content:center}
@@ -172,14 +172,16 @@ button.cell{cursor:pointer; touch-action:manipulation}
 @media (prefers-reduced-motion: reduce){ .cell::after, .board{animation:none!important} }
 
 /* ---------- lobby ---------- */
-.stepper{display:flex; align-items:center; gap:12px; border:2px solid var(--rule); border-radius:12px; padding:8px 10px; background:var(--sheet)}
+.stepper{display:flex; align-items:center; gap:12px}
 .stepper .mid{flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center}
 .stepper .num{font:700 1.5rem/1 var(--display); padding-top:.15em}
-.mode{border:2px solid var(--rule); border-radius:12px; padding:12px; background:var(--sheet); display:flex; flex-direction:column; gap:8px}
+.mode{border:2px solid var(--rule); border-radius:12px; padding:14px; background:var(--sheet); display:flex; flex-direction:column; gap:10px}
+.mode > .btn{width:100%; min-height:50px}      /* every mode ends in the same full-width button */
+.mode .code-in{min-height:50px; background:var(--paper)}
 .mode h3{font:700 1.3rem/1.1 var(--display); margin:0; padding-top:.15em}
 .mode .who{font:700 1.15rem/1 var(--display); padding-top:.15em}
 .mode input[type=range]{width:100%; margin:0; accent-color:var(--ink); height:30px; touch-action:pan-y}
-.mode .ends{display:flex; justify-content:space-between; font-size:.72rem; color:var(--soft); margin-top:-6px}
+.mode .ends{display:flex; justify-content:space-between; font-size:.72rem; color:var(--soft); margin-top:-8px}
 .slot .lvl{flex:1 1 0; min-width:0; text-align:center; font:700 1.2rem/1 var(--display); padding-top:.2em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
 /* ---------- setup ---------- */
@@ -838,8 +840,8 @@ function build(name){
   view.className = (name==='lobby' || name==='full' || name==='joining') ? 'scroll' : '';
   if (name==='lobby'){
     view.innerHTML = `
-      <section class="stack">
-        <div class="label">Mit wie vielen Schiffen?</div>
+      <section class="mode">
+        <h3>Anzahl Schiffe</h3>
         <div class="stepper">
           <button type="button" class="btn sq" id="btnLess" aria-label="Ein Schiff weniger">−</button>
           <div class="mid"><div class="num" id="nShips"></div><div id="nPips"></div></div>
@@ -853,13 +855,14 @@ function build(name){
         <div class="ends"><span>leicht</span><span>schwer</span></div>
         <button type="button" class="btn primary" id="btnSolo">Solo Spiel starten</button>
       </section>
-      <button type="button" class="btn primary" id="btnCreate">Mitspieler-Link erstellen</button>
+      <section class="mode">
+        <h3>Mitspieler einladen</h3>
+        <button type="button" class="btn primary" id="btnCreate">Mitspieler-Link erstellen</button>
+      </section>
       <form class="mode" id="joinForm">
         <h3><label for="joinCode">Als Spieler beitreten</label></h3>
-        <div class="row">
-          <div class="grow"><input class="code-in" id="joinCode" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Code, 5 Zeichen"></div>
-          <button type="submit" class="btn primary">Beitreten</button>
-        </div>
+        <input class="code-in" id="joinCode" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Code, 5 Zeichen">
+        <button type="submit" class="btn primary">Beitreten</button>
       </form>`;
     const pre = cleanCode(location.hash.slice(1)); if (pre.length===5) $('joinCode').value = pre;
   }
