@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Schiffe versenken</title>
-<meta name="description" content="Schiffe versenken für zwei Smartphones. Link teilen und losspielen.">
+<meta name="description" content="Schiffe versenken: gegen den Computer oder zu zweit auf zwei Smartphones.">
 <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f1626" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -174,6 +174,11 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .stepper{display:flex; align-items:center; gap:12px; border:2px solid var(--rule); border-radius:12px; padding:8px 10px; background:var(--sheet)}
 .stepper .mid{flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center}
 .stepper .num{font:700 1.5rem/1 var(--display); padding-top:.15em}
+.skill{border:2px solid var(--rule); border-radius:12px; padding:10px 12px; background:var(--sheet); display:flex; flex-direction:column; gap:6px}
+.skill .who{font:700 1.35rem/1 var(--display); padding-top:.15em}
+.skill input[type=range]{width:100%; margin:4px 0; accent-color:var(--ink); height:28px; touch-action:pan-y}
+.skill .ends{display:flex; justify-content:space-between; font-size:.72rem; color:var(--soft)}
+.slot .lvl{flex:1 1 0; min-width:0; text-align:center; font:700 1.2rem/1 var(--display); padding-top:.2em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 
 /* ---------- setup ---------- */
 .slot{height:3rem; display:flex; align-items:center; gap:10px}
@@ -257,6 +262,13 @@ const YOURS  = {5:'dein Schlachtschiff', 4:'deinen Kreuzer', 3:'deinen Zerstöre
 const LETTERS = 'ABCDEFGHIJ';
 const KEY = 'schiffe-versenken-v2';
 const PREF = 'schiffe-versenken-anzahl';
+const PREF_LVL = 'schiffe-versenken-koennen';
+const LEVELS = [null,
+  ['Leichtmatrose', 'Schießt planlos und vergisst Treffer gern wieder.'],
+  ['Matrose',       'Sucht zufällig, bleibt an einem Treffer aber meistens dran.'],
+  ['Steuermann',    'Verfolgt jeden Treffer und weiß, dass Schiffe Abstand halten.'],
+  ['Kapitän',       'Sucht mit System und lässt keinen Treffer liegen.'],
+  ['Admiral',       'Rechnet aus, wo deine Schiffe am wahrscheinlichsten liegen.']];
 const PEER_PREFIX = 'schiffe-versenken-v2-';
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const PEER_LIB = [
@@ -273,7 +285,7 @@ const fleet = () => FLEETS[S.fleet] || FLEETS[5];
 
 /* ================= state ================= */
 function blank(){
-  return { code:null, role:null, token:null, guest:null, fleet:5, met:false, g:0,
+  return { code:null, role:null, token:null, guest:null, fleet:5, met:false, g:0, solo:false, bot:null,
            ships:[], ready:false, peerReady:false, fired:[], recv:[], reveal:null };
 }
 function load(){
@@ -285,12 +297,13 @@ function load(){
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 function loadPref(){ try{ const n = parseInt(localStorage.getItem(PREF), 10); if (FLEETS[n]) return n; }catch(e){} return 5; }
+function loadLvl(){ try{ const n = parseInt(localStorage.getItem(PREF_LVL), 10); if (LEVELS[n]) return n; }catch(e){} return 2; }
 
 let S = load() || blank();
 /* runtime only */
 const R = { screen:null, status:'idle', peer:null, conn:null, pending:null, lastSeen:0, probe:0, backoff:0, restartTimer:null, dialTimer:null,
             hostOffline:false, peerLeft:false, full:false, sel:null, drag:null, tapGuard:null, pick:null, orient:true,
-            menu:false, confirmLeave:false, pickFleet:loadPref(), showLink:false };
+            menu:false, confirmLeave:false, pickFleet:loadPref(), pickLvl:loadLvl(), botTimer:null, showLink:false };
 
 /* ================= fleet geometry ================= */
 function cellsOf(s){ const a=[]; if (!s.on) return a; for(let i=0;i<s.len;i++) a.push(s.h ? s.y*10+s.x+i : (s.y+i)*10+s.x); return a; }
@@ -363,6 +376,7 @@ function turn(){
 function resetGame(g){
   S.g = g; S.ships = blankShips(fleet()); S.ready=false; S.peerReady=false;
   S.fired=[]; S.recv=[]; S.reveal=null; R.sel=null; R.pick=null;
+  if (S.solo){ S.peerReady = true; S.bot.ships = randomLayout(fleet()); }
 }
 
 /* ================= incoming / outgoing shots ================= */
@@ -407,9 +421,89 @@ function fire(){
 }
 function buzz(p){ try{ if (navigator.vibrate) navigator.vibrate(p); }catch(e){} }
 
+/* ================= computer opponent ================= */
+/* Pure: picks the computer's next shot from what it has seen so far.
+   lvl 1..5, recv = its shots [{c, r:'h'|'m', sunk?}], fl = fleet lengths. */
+function botChoose(lvl, recv, fl){
+  const shot = new Map(recv.map(f => [f.c, f]));
+  const sunk = new Set(); recv.forEach(f => { if (f.sunk) f.sunk.forEach(c => sunk.add(c)); });
+  const blocked = lvl>=3 ? around([...sunk]) : new Set();     /* from Steuermann up: ships never touch */
+  const open = []; for (let c=0;c<100;c++) if (!shot.has(c)) open.push(c);
+  const good = open.filter(c => !blocked.has(c));
+  const pool = good.length ? good : open;
+  const hits = recv.filter(f => f.r==='h' && !sunk.has(f.c)).map(f => f.c);
+  const left = fl.slice(); recv.forEach(f => { if (f.sunk){ const k = left.indexOf(f.sunk.length); if (k>=0) left.splice(k,1); } });
+  const pick = a => a[Math.floor(Math.random()*a.length)];
+
+  if (lvl>=5){
+    /* count every place a remaining ship could still be; open hits weigh in heavily */
+    const w = new Array(100).fill(0), hs = new Set(hits);
+    for (const len of left) for (let h=0;h<2;h++) for (let y=0; y<(h?10:11-len); y++) for (let x=0; x<(h?11-len:10); x++){
+      let ok = true, cover = 0; const cs = [];
+      for (let i=0;i<len;i++){
+        const c = h ? y*10+x+i : (y+i)*10+x, f = shot.get(c);
+        if (blocked.has(c) || sunk.has(c) || (f && f.r==='m')){ ok = false; break; }
+        if (hs.has(c)) cover++;
+        cs.push(c);
+      }
+      if (!ok) continue;
+      const wt = cover ? 100*cover : 1;
+      for (const c of cs) if (!shot.has(c)) w[c] += wt;
+    }
+    let best = -1, arr = [];
+    for (const c of open){ if (w[c]>best){ best = w[c]; arr = [c]; } else if (w[c]===best) arr.push(c); }
+    return pick(arr);
+  }
+  /* follow up on a hit; the weaker ranks sometimes lose track of it */
+  if (hits.length && Math.random() < [0, .5, .8, 1, 1][lvl]){
+    let cand = [];
+    const hs = new Set(hits), inPool = new Set(pool);
+    if (lvl>=2) for (const h of hits){
+      if (h%10<9 && hs.has(h+1)){ let a=h, b=h; while (a%10>0 && hs.has(a-1)) a--; while (b%10<9 && hs.has(b+1)) b++;
+        if (a%10>0) cand.push(a-1); if (b%10<9) cand.push(b+1); }
+      if (h<90 && hs.has(h+10)){ let a=h, b=h; while (a>=10 && hs.has(a-10)) a-=10; while (b<90 && hs.has(b+10)) b+=10;
+        if (a>=10) cand.push(a-10); if (b<90) cand.push(b+10); }
+    }
+    cand = cand.filter(c => inPool.has(c));
+    if (!cand.length) for (const h of hits){
+      if (h%10>0) cand.push(h-1); if (h%10<9) cand.push(h+1); if (h>=10) cand.push(h-10); if (h<90) cand.push(h+10);
+    }
+    cand = cand.filter(c => inPool.has(c));
+    if (cand.length) return pick(cand);
+  }
+  if (lvl>=4){                                                  /* Kapitän: search in a pattern no ship can slip through */
+    const m = left.length ? Math.min.apply(null, left) : 2;
+    const par = pool.filter(c => ((c%10) + Math.floor(c/10)) % m === 0);
+    if (par.length) return pick(par);
+  }
+  return pick(pool);
+}
+/* in a game against the computer, everything "sent" lands here instead of on the network */
+function botRecv(m){
+  if (m.t!=='shot') return;
+  setTimeout(() => {
+    if (!S.solo || m.g!==S.g) return;
+    const ship = S.bot.ships.find(s => cellsOf(s).includes(m.c));
+    const res = {t:'res', g:S.g, n:m.n, c:m.c, r: ship ? 'h' : 'm'};
+    if (ship){ const cs = cellsOf(ship); if (cs.every(k => k===m.c || S.fired.some(f => f.c===k && f.r==='h'))) res.sunk = cs; }
+    onMsg(res);
+  }, 220);
+}
+function botTick(name){
+  if (!S.solo) return;
+  if (outcome()){ if (!S.reveal){ S.reveal = S.bot.ships; save(); } return; }
+  if (R.botTimer || name!=='battle' || turn()!=='them') return;
+  R.botTimer = setTimeout(() => {
+    R.botTimer = null;
+    if (!S.solo || outcome() || screenName()!=='battle' || turn()!=='them') return;
+    onMsg({t:'shot', g:S.g, n:S.fired.length+S.recv.length, c:botChoose(S.bot.lvl, S.recv, fleet())});
+  }, 750 + Math.random()*450);
+}
+const OPP = () => S.solo ? 'Computer' : 'Gegner';
+
 /* ================= connection (PeerJS) ================= */
 let gen = 0, libPromise = null;
-const online = () => !!(R.conn && R.conn.open);
+const online = () => S.solo || !!(R.conn && R.conn.open);
 
 function loadLib(){
   if (window.Peer) return Promise.resolve();
@@ -442,7 +536,7 @@ function scheduleRestart(){
 }
 function startLink(){
   stopLink();
-  if (!S.code || R.full) return;
+  if (!S.code || R.full || S.solo) return;
   const my = gen;
   if (R.status!=='reconnecting') setStatus('connecting');
   loadLib().then(() => {
@@ -516,6 +610,7 @@ function wire(c, my){
   c.on('error', gone);
 }
 function send(o){
+  if (S.solo){ botRecv(Object.assign({g:S.g}, o)); return; }
   if (!online()) return;
   try{ R.conn.send(Object.assign({g:S.g}, o)); }catch(e){}
 }
@@ -572,7 +667,7 @@ function onMsg(m){
 }
 /* keep-alive: notice a dead link quickly, especially after the phone was locked */
 setInterval(() => {
-  if (!S.code || !online()) return;
+  if (!S.code || S.solo || !online()) return;
   const now = Date.now();
   const stale = now - R.lastSeen > 13000 || (R.probe && now - R.probe > 4000 && R.lastSeen < R.probe);
   if (stale){
@@ -583,10 +678,11 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState!=='visible' || !S.code) return;
   wake();
+  if (S.solo) return;
   if (online()){ R.lastSeen = Math.max(R.lastSeen, Date.now()-8000); R.probe = Date.now(); send({t:'ping', d:digest()}); }
   else { R.backoff = 0; startLink(); }
 });
-window.addEventListener('online', () => { if (S.code && !online()){ R.backoff = 0; startLink(); } });
+window.addEventListener('online', () => { if (S.code && !S.solo && !online()){ R.backoff = 0; startLink(); } });
 let wakeLock = null;
 function wake(){
   try{
@@ -610,6 +706,19 @@ function createGame(){
   S.fleet = R.pickFleet; S.met = true; S.ships = blankShips(fleet());
   R.full=false; R.backoff=0; R.pick=null; R.orient=true; save(); setHash(S.code); startLink(); wake(); paint();
 }
+function createSolo(){
+  stopLink();
+  S = blank();
+  S.code = 'SOLO'; S.solo = true; S.role = 'host'; S.fleet = R.pickFleet; S.met = true; S.peerReady = true;
+  S.ships = blankShips(fleet()); S.bot = {lvl:R.pickLvl, ships:randomLayout(fleet())};
+  R.full=false; R.status='idle'; R.pick=null; R.orient=true; save(); setHash(''); wake(); paint();
+}
+function setLvl(n){
+  R.pickLvl = clamp(n, 1, 5);
+  try{ localStorage.setItem(PREF_LVL, String(R.pickLvl)); }catch(e){}
+  if (S.solo && S.bot){ S.bot.lvl = R.pickLvl; save(); }
+  paint();
+}
 function joinGame(code){
   code = cleanCode(code);
   if (code.length!==5){ toast('Der Code hat 5 Zeichen.'); return; }
@@ -617,7 +726,7 @@ function joinGame(code){
   S.code = code; S.role='guest'; S.token = rand(16, 'abcdefghijklmnopqrstuvwxyz0123456789');
   R.full=false; R.hostOffline=false; R.backoff=0; R.pick=null; R.orient=true; save(); setHash(code); startLink(); wake(); paint();
 }
-function toLobby(){ R.full=false; stopLink(); S = blank(); save(); setHash(''); R.status='idle'; R.sel=null; R.menu=false; R.confirmLeave=false; paint(); }
+function toLobby(){ R.full=false; clearTimeout(R.botTimer); R.botTimer=null; stopLink(); S = blank(); save(); setHash(''); R.status='idle'; R.sel=null; R.menu=false; R.confirmLeave=false; paint(); }
 function leaveGame(){ send({t:'bye'}); setTimeout(toLobby, 60); }
 function setReady(v){
   if (v && !validLayout(S.ships, fleet())) return;
@@ -726,7 +835,7 @@ function build(name){
   view.className = (name==='lobby' || name==='full' || name==='joining') ? 'scroll' : '';
   if (name==='lobby'){
     view.innerHTML = `
-      <section class="hero">${seaHTML('seaDemo', false)}<p class="cap small soft">Zwei Handys, ein Link. Jeder sieht nur sein eigenes Blatt.</p></section>
+      <section class="hero">${seaHTML('seaDemo', false)}<p class="cap small soft">Allein gegen den Computer oder zu zweit auf zwei Handys.</p></section>
       <section class="stack">
         <div class="label">Mit wie vielen Schiffen?</div>
         <div class="stepper">
@@ -734,9 +843,22 @@ function build(name){
           <div class="mid"><div class="num" id="nShips"></div><div id="nPips"></div></div>
           <button type="button" class="btn sq" id="btnMore" aria-label="Ein Schiff mehr">+</button>
         </div>
-        <button type="button" class="btn primary" id="btnCreate">Neues Spiel starten</button>
+      </section>
+      <section class="stack">
+        <div class="label">Gegen den Computer</div>
+        <div class="skill">
+          <div class="row"><span class="small soft grow">Können des Computers</span><span class="who" id="lvlName"></span></div>
+          <input type="range" id="lvl" min="1" max="5" step="1" aria-label="Können des Computers">
+          <div class="ends"><span>leicht</span><span>schwer</span></div>
+          <p class="small soft" id="lvlDesc"></p>
+        </div>
+        <button type="button" class="btn primary" id="btnSolo">Gegen den Computer spielen</button>
       </section>
       <hr>
+      <section class="stack">
+        <div class="label">Zu zweit auf zwei Handys</div>
+        <button type="button" class="btn primary" id="btnCreate">Neues Spiel starten</button>
+      </section>
       <form class="stack" id="joinForm">
         <label class="label" for="joinCode">Einem Spiel beitreten</label>
         <div class="row">
@@ -774,7 +896,7 @@ function build(name){
   else if (name==='battle'){
     view.innerHTML = `
       <section class="status"><h2 id="stTitle"></h2><p class="small" id="stSub"></p></section>
-      <div class="bhead"><span class="label">Gegner</span><span id="tallyT"></span></div>
+      <div class="bhead"><span class="label" id="oppLabel">Gegner</span><span id="tallyT"></span></div>
       <section class="fit">${seaHTML('seaTarget', true)}</section>
       <section class="firebox" id="fireBox"></section>
       <div class="bhead"><span class="label">Deine Flotte</span><span id="tallyO"></span></div>
@@ -785,7 +907,7 @@ function build(name){
 
 function paintConn(){
   const el = $('conn');
-  if (!S.code){ el.hidden = true; return; }
+  if (!S.code || S.solo){ el.hidden = true; return; }
   el.hidden = false;
   let cls='wait', txt='Verbinde…';
   if (online()){ cls='on'; txt='Verbunden'; }
@@ -805,7 +927,7 @@ function paintMenu(){
   if (!R.menu) return;
   const inGame = !!S.code;
   setHTML('panel', `
-    ${inGame ? `<div class="stack"><div class="label">Spielcode</div>
+    ${inGame && !S.solo ? `<div class="stack"><div class="label">Spielcode</div>
       <div class="row"><div class="code grow">${S.code}</div><button type="button" class="btn primary sm" id="btnShare2">Link teilen</button></div>
       ${R.showLink ? `<input class="link-in" id="linkIn" readonly value="${shareUrl()}">` : ''}</div><hr>` : ''}
     <div class="stack"><div class="label">Regeln</div><ul>
@@ -841,6 +963,7 @@ function paintTray(){
 
 function paint(){
   const name = screenName();
+  botTick(name);
   if (name!==R.screen) build(name);
   paintConn();
   paintMenu();
@@ -850,6 +973,8 @@ function paint(){
     setText('nShips', R.pickFleet===1 ? '1 Schiff' : R.pickFleet + ' Schiffe');
     setHTML('nPips', pipsHTML(f, []));
     $('btnLess').disabled = R.pickFleet<=1; $('btnMore').disabled = R.pickFleet>=10;
+    if ($('lvl').value !== String(R.pickLvl)) $('lvl').value = String(R.pickLvl);
+    setText('lvlName', LEVELS[R.pickLvl][0]); setText('lvlDesc', LEVELS[R.pickLvl][1]);
   }
   else if (name==='joining'){
     setText('jCode', S.code);
@@ -860,7 +985,12 @@ function paint(){
   else if (name==='setup'){
     const all = S.ships.length>0 && S.ships.every(s=>s.on);
     /* top slot: invite while alone, opponent status afterwards (same height, so the board stays put) */
-    if (S.role==='host' && !S.guest){
+    if (S.solo){
+      setHTML('slot', `<span class="label">Computer</span>
+        <button type="button" class="btn sq sm" id="btnLvlLess" aria-label="Leichter" ${S.bot.lvl<=1?'disabled':''}>−</button>
+        <span class="lvl">${LEVELS[S.bot.lvl][0]}</span>
+        <button type="button" class="btn sq sm" id="btnLvlMore" aria-label="Schwerer" ${S.bot.lvl>=5?'disabled':''}>+</button>`);
+    } else if (S.role==='host' && !S.guest){
       setHTML('slot', `<span class="label">Code</span><span class="code grow">${S.code}</span><button type="button" class="btn primary sm" id="btnShare">Link teilen</button>`);
     } else {
       let opp;
@@ -888,20 +1018,21 @@ function paint(){
     else if (out==='lost') title = 'Verloren';
     else if (t==='me') title = '<span class="hl">Du bist dran</span>';
     else if (t==='wait') title = 'Schuss unterwegs…';
-    else title = 'Gegner ist dran';
+    else title = OPP() + ' ist dran';
     if (l){
       const nm = cellName(l.c), len = l.sunk ? l.sunk.length : 0;
       if (l.mine) sub = l.r==null ? `Dein Schuss auf ${nm}…`
         : l.r==='m' ? `${nm}: Wasser.`
         : len ? `${nm}: Treffer, ${NAMES[len]||'Schiff'} versenkt!`
         : `${nm}: Treffer!` + (out?'':' Du darfst nochmal.');
-      else sub = l.r==='m' ? `Gegner schießt auf ${nm}: Wasser.`
-        : len ? `Gegner versenkt ${YOURS[len]||'dein Schiff'} (${nm}).`
-        : `Gegner trifft auf ${nm}.`;
-    } else sub = t==='me' ? 'Du eröffnest. Tippe oben ein Feld an.' : 'Dein Gegner eröffnet das Spiel.';
+      else sub = l.r==='m' ? `${OPP()} schießt auf ${nm}: Wasser.`
+        : len ? `${OPP()} versenkt ${YOURS[len]||'dein Schiff'} (${nm}).`
+        : `${OPP()} trifft auf ${nm}.`;
+    } else sub = t==='me' ? 'Du eröffnest. Tippe oben ein Feld an.' : `${S.solo ? 'Der Computer' : 'Dein Gegner'} eröffnet das Spiel.`;
     if (out==='won') sub = 'Alle gegnerischen Schiffe sind versenkt.';
     if (out==='lost') sub = 'Gestrichelt siehst du, was übrig war.';
     setHTML('stTitle', title);
+    setText('oppLabel', S.solo ? 'Computer (' + LEVELS[S.bot.lvl][0] + ')' : 'Gegner');
     const el = $('stSub');
     if (!online() && !out){ el.className='small warn'; setText('stSub', R.peerLeft ? 'Dein Gegner hat das Spiel verlassen.' : 'Verbindung unterbrochen, verbinde neu…'); }
     else { el.className='small soft'; setText('stSub', sub); }
@@ -930,7 +1061,7 @@ function paint(){
     setHTML('fireBox', out
       ? `<button type="button" class="btn primary" id="btnAgain">Revanche</button>`
       : `<button type="button" class="btn fire" id="btnFire" ${R.sel!=null && canAim && online() ? '' : 'disabled'}>${
-          !canAim ? (t==='wait' ? 'Warte auf Antwort…' : 'Gegner zielt…')
+          !canAim ? (t==='wait' ? 'Warte auf Antwort…' : OPP() + ' zielt…')
           : !online() ? 'Keine Verbindung'
           : R.sel!=null ? `Feuer auf ${cellName(R.sel)}` : 'Oben ein Feld antippen'}</button>`);
 
@@ -982,6 +1113,9 @@ document.addEventListener('click', e => {
       try{ localStorage.setItem(PREF, String(R.pickFleet)); }catch(err){}
       paint(); break;
     case 'btnCreate': createGame(); break;
+    case 'btnSolo': createSolo(); break;
+    case 'btnLvlLess': setLvl(S.bot.lvl - 1); break;
+    case 'btnLvlMore': setLvl(S.bot.lvl + 1); break;
     case 'btnBack': toLobby(); break;
     case 'btnShare': case 'btnShare2': share(); break;
     case 'btnOrient': R.orient = !R.orient; paint(); break;
@@ -997,7 +1131,10 @@ document.addEventListener('click', e => {
   }
 });
 view.addEventListener('submit', e => { e.preventDefault(); if (e.target.id==='joinForm') joinGame($('joinCode').value); });
-view.addEventListener('input', e => { if (e.target.id==='joinCode'){ const v = cleanCode(e.target.value); if (v!==e.target.value) e.target.value = v; } });
+view.addEventListener('input', e => {
+  if (e.target.id==='joinCode'){ const v = cleanCode(e.target.value); if (v!==e.target.value) e.target.value = v; }
+  else if (e.target.id==='lvl') setLvl(parseInt(e.target.value, 10) || 2);
+});
 
 /* placing ships with the finger: drag from the harbour or across the sheet, tap a placed ship to turn it */
 view.addEventListener('pointerdown', e => {
@@ -1055,8 +1192,9 @@ document.addEventListener('gesturestart', e => e.preventDefault());   /* iOS: no
   const hash = cleanCode(location.hash.slice(1));
   if (S.code){
     if (!sameFleet(S.ships, fleet())) S.ships = blankShips(fleet());
+    if (S.solo && !(S.bot && LEVELS[S.bot.lvl] && validLayout(S.bot.ships, fleet()))) S.bot = {lvl:R.pickLvl, ships:randomLayout(fleet())};
     if (hash.length===5 && hash!==S.code && !started()){ joinGame(hash); return; }
-    setHash(S.code); startLink(); wake();
+    if (S.solo) wake(); else { setHash(S.code); startLink(); wake(); }
   } else if (hash.length===5){ joinGame(hash); return; }
   paint();
 })();

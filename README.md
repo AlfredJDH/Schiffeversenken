@@ -1,6 +1,6 @@
 # Schiffe versenken
 
-Schiffe versenken für zwei Smartphones. Beide öffnen dieselbe Seite, einer startet ein Spiel und schickt dem anderen den Link.
+Schiffe versenken fürs Smartphone: allein gegen den Computer oder zu zweit auf zwei Handys. Zu zweit öffnen beide dieselbe Seite, einer startet ein Spiel und schickt dem anderen den Link.
 
 **Spielen:** https://alfredjdh.github.io/Schiffeversenken/
 
@@ -12,6 +12,10 @@ Schiffe versenken für zwei Smartphones. Beide öffnen dieselbe Seite, einer sta
 4. Abwechselnd ein Feld antippen und feuern. Bei einem Treffer darf man noch einmal.
 
 Das Spielfeld steht fest auf dem Bildschirm, während des Spiels scrollt nichts. Der Spielstand wird auf dem jeweiligen Handy gespeichert. Seite neu laden oder Handy sperren ist kein Problem, das Spiel verbindet sich wieder.
+
+## Gegen den Computer
+
+Auf der Startseite den Regler „Können des Computers“ einstellen und „Gegen den Computer spielen“ antippen. Es gibt fünf Stufen, vom Leichtmatrosen (schießt planlos) bis zum Admiral (rechnet aus, wo die Schiffe am wahrscheinlichsten liegen). Die Stufe lässt sich vor jeder Partie beim Aufstellen noch ändern. Dieser Modus braucht keine Internetverbindung zum Mitspieler.
 
 ## Technik
 
