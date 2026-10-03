@@ -155,7 +155,6 @@ button.cell{cursor:pointer; touch-action:manipulation}
 /* marks */
 .cell.miss{background:var(--water)}
 .cell.miss::after{inset:10%; background:var(--fx-miss) center/contain no-repeat; z-index:2}   /* water: waves */
-.cell.nope::after{inset:42%; border-radius:50%; background:var(--soft); opacity:.4; z-index:2}
 .cell.pend::after{inset:26%; border-radius:50%; border:2px dashed var(--soft); z-index:2; animation:spin 2.4s linear infinite}
 .cell.hit::after{inset:3%; background:var(--fx-hit) center/contain no-repeat; z-index:2}       /* hit: fire */
 .cell.sel{background:var(--marker)}
@@ -206,11 +205,14 @@ button.cell{cursor:pointer; touch-action:manipulation}
 .btnrow .btn{flex:1 1 0; min-width:0; padding-inline:.3em}
 
 /* ---------- battle: two sheets stacked, aiming on top, own fleet below ---------- */
-.status{height:3.1rem; display:flex; flex-direction:column; justify-content:center; gap:1px; overflow:hidden}
-.status h2{font-size:1.45rem; white-space:nowrap}
-.status h2 .hl{text-decoration:underline; text-decoration-color:var(--marker); text-decoration-thickness:.42em; text-underline-offset:-.16em; text-decoration-skip-ink:none}
+.status{height:1.6rem; display:flex; align-items:center; overflow:hidden}
+.status p{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
 .status .warn{color:var(--red); font-weight:600}
-.status p{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.status b{color:var(--pencil); font-weight:700}
+.status b.hl{text-decoration:underline; text-decoration-color:var(--marker); text-decoration-thickness:.42em; text-underline-offset:-.16em; text-decoration-skip-ink:none}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap}
+/* whose turn it is: a highlighter frame around the sheet where the next shot lands */
+.sea.active .board::after{content:""; position:absolute; inset:-2px; border:4px solid var(--marker); border-radius:3px; pointer-events:none; z-index:5}
 .bhead{display:flex; align-items:center; justify-content:space-between; gap:10px; height:1rem; overflow:hidden}
 .firebox{height:46px}
 .firebox .btn{width:100%; min-height:46px}
@@ -895,7 +897,7 @@ function build(name){
   }
   else if (name==='battle'){
     view.innerHTML = `
-      <section class="status"><h2 id="stTitle"></h2><p class="small" id="stSub"></p></section>
+      <section class="status"><h2 id="stTitle" class="sr" aria-live="polite"></h2><p class="small" id="stSub"></p></section>
       <div class="bhead"><span class="label" id="oppLabel">Gegner</span><span id="tallyT"></span></div>
       <section class="fit">${seaHTML('seaTarget', true)}</section>
       <section class="firebox" id="fireBox"></section>
@@ -1010,9 +1012,9 @@ function paint(){
   else if (name==='battle'){
     const out = outcome(), t = turn(), l = lastShot();
     let title, sub='';
-    if (out==='won') title = '<span class="hl">Gewonnen!</span>';
+    if (out==='won') title = 'Gewonnen!';
     else if (out==='lost') title = 'Verloren';
-    else if (t==='me') title = '<span class="hl">Du bist dran</span>';
+    else if (t==='me') title = 'Du bist dran';
     else if (t==='wait') title = 'Schuss unterwegs…';
     else title = OPP() + ' ist dran';
     if (l){
@@ -1025,13 +1027,13 @@ function paint(){
         : len ? `${OPP()} versenkt ${YOURS[len]||'dein Schiff'} (${nm}).`
         : `${OPP()} trifft auf ${nm}.`;
     } else sub = t==='me' ? 'Du eröffnest. Tippe oben ein Feld an.' : `${S.solo ? 'Der Computer' : 'Dein Gegner'} eröffnet das Spiel.`;
-    if (out==='won') sub = 'Alle gegnerischen Schiffe sind versenkt.';
-    if (out==='lost') sub = 'Gestrichelt siehst du, was übrig war.';
-    setHTML('stTitle', title);
+    if (out==='won') sub = '<b class="hl">Gewonnen!</b> Alle gegnerischen Schiffe sind versenkt.';
+    if (out==='lost') sub = '<b>Verloren.</b> Gestrichelt siehst du, was übrig war.';
+    setText('stTitle', title);
     setText('oppLabel', S.solo ? 'Computer (' + LEVELS[S.bot.lvl][0] + ')' : 'Gegner');
     const el = $('stSub');
-    if (!online() && !out){ el.className='small warn'; setText('stSub', R.peerLeft ? 'Dein Gegner hat das Spiel verlassen.' : 'Verbindung unterbrochen, verbinde neu…'); }
-    else { el.className='small soft'; setText('stSub', sub); }
+    if (!online() && !out){ el.className='small warn'; setHTML('stSub', R.peerLeft ? 'Dein Gegner hat das Spiel verlassen.' : 'Verbindung unterbrochen, verbinde neu…'); }
+    else { el.className='small soft'; setHTML('stSub', sub); }
 
     /* target board */
     const m = {}, sunkLens = [];
@@ -1041,14 +1043,13 @@ function paint(){
       sunkLens.push(f.sunk.length);
       const mm = {}; addShip(mm, f.sunk, 'ship sunk');
       f.sunk.forEach(c => m[c] = (m[c]||'') + mm[c]);
-      around(f.sunk).forEach(c => { if (!firedSet.has(c)) m[c] = ' nope'; });
     }
     if (out && S.reveal) S.reveal.forEach(s => {
       const cs = cellsOf(s); if (cs.every(c=>firedSet.has(c) && (m[c]||'').includes('sunk'))) return;
       const mm = {}; addShip(mm, cs, 'ship ghost'); cs.forEach(c => m[c] = (m[c]||'') + mm[c]);
     });
     const canAim = !out && t==='me';
-    if (R.sel!=null && (!canAim || firedSet.has(R.sel) || (m[R.sel]||'').includes('nope'))) R.sel = null;
+    if (R.sel!=null && (!canAim || firedSet.has(R.sel))) R.sel = null;
     if (R.sel!=null) m[R.sel] = (m[R.sel]||'') + ' sel';
     if (l && l.mine) m[l.c] = (m[l.c]||'') + ' last';
     paintBoard('seaTarget', m);
@@ -1068,6 +1069,8 @@ function paint(){
     for (const f of S.recv) o[f.c] = (o[f.c]||'') + (f.r==='h' ? ' hit' : ' miss');
     if (l && !l.mine) o[l.c] = (o[l.c]||'') + ' last';
     paintBoard('seaOwn', o);
+    $('seaTarget').classList.toggle('active', !out && t!=='them');
+    $('seaOwn').classList.toggle('active', !out && t==='them');
 
     const f = fleet();
     setHTML('tallyT', pipsHTML(f, sunkLens));
@@ -1097,7 +1100,7 @@ document.addEventListener('click', e => {
   if (b.classList.contains('cell') && R.screen==='battle'){
     const c = +b.dataset.c;
     if (outcome() || turn()!=='me') return;
-    if (S.fired.some(f=>f.c===c) || b.classList.contains('nope')) return;
+    if (S.fired.some(f=>f.c===c)) return;
     if (R.sel===c){ fire(); return; }
     R.sel = c; paint(); return;
   }
